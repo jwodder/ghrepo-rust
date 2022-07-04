@@ -2,6 +2,7 @@
 extern crate lazy_static;
 
 use regex::Regex;
+use std::error;
 use std::fmt;
 use std::str::FromStr;
 
@@ -30,25 +31,37 @@ lazy_static! {
     static ref OWNER_NAME: String = format!(r"(?P<owner>{})/(?P<name>{})", GH_OWNER_RGX, GH_REPO_RGX);
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ParseError {
+    InvalidSpec(String),
+    InvalidOwner(String),
+    InvalidName(String),
+}
+
+impl fmt::Display for ParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            ParseError::InvalidSpec(s) => write!(f, "Invalid GitHub repository spec: {:?}", s),
+            ParseError::InvalidOwner(s) => write!(f, "Invalid GitHub repository owner: {:?}", s),
+            ParseError::InvalidName(s) => write!(f, "Invalid GitHub repository name: {:?}", s),
+        }
+    }
+}
+
+impl error::Error for ParseError {}
+
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct GHRepo {
     owner: String,
     name: String,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Error {
-    InvalidSpec(String),
-    InvalidOwner(String),
-    InvalidName(String),
-}
-
 impl GHRepo {
-    pub fn new(owner: &str, name: &str) -> Result<Self, Error> {
+    pub fn new(owner: &str, name: &str) -> Result<Self, ParseError> {
         if !GHRepo::is_valid_owner(owner) {
-            Err(Error::InvalidOwner(owner.to_string()))
+            Err(ParseError::InvalidOwner(owner.to_string()))
         } else if !GHRepo::is_valid_name(name) {
-            Err(Error::InvalidName(name.to_string()))
+            Err(ParseError::InvalidName(name.to_string()))
         } else {
             Ok(GHRepo {
                 owner: owner.to_string(),
@@ -99,7 +112,7 @@ impl GHRepo {
         format!("git@github.com:{}/{}.git", self.owner, self.name)
     }
 
-    pub fn from_url(s: &str) -> Result<Self, Error> {
+    pub fn from_url(s: &str) -> Result<Self, ParseError> {
         lazy_static! {
             static ref GITHUB_URL_CREGEXEN: [Regex; 4] = [
                 Regex::new(format!(
@@ -128,7 +141,7 @@ impl GHRepo {
                 );
             }
         }
-        return Err(Error::InvalidSpec(s.to_string()));
+        return Err(ParseError::InvalidSpec(s.to_string()));
     }
 }
 
@@ -139,9 +152,9 @@ impl fmt::Display for GHRepo {
 }
 
 impl FromStr for GHRepo {
-    type Err = Error;
+    type Err = ParseError;
 
-    fn from_str(s: &str) -> Result<Self, Error> {
+    fn from_str(s: &str) -> Result<Self, ParseError> {
         lazy_static! {
             static ref RGX: Regex = Regex::new(format!("^{}$", *OWNER_NAME).as_str()).unwrap();
         }
