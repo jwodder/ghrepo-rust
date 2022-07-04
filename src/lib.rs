@@ -36,7 +36,7 @@ pub struct GHRepo {
     name: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Error {
     InvalidSpec(String),
     InvalidOwner(String),
@@ -99,7 +99,7 @@ impl GHRepo {
         format!("https://github.com/{}/{}", self.owner, self.name)
     }
 
-    pub fn ssh_url(self) -> String {
+    pub fn ssh_url(&self) -> String {
         format!("git@github.com:{}/{}.git", self.owner, self.name)
     }
 
@@ -167,10 +167,7 @@ mod tests {
 
     #[test]
     fn test_api_url() {
-        let r = GHRepo {
-            owner: "octocat",
-            repo: "repository",
-        };
+        let r = GHRepo::new("octocat", "repository").unwrap();
         assert_eq!(
             r.api_url(),
             "https://api.github.com/repos/octocat/repository"
@@ -180,40 +177,28 @@ mod tests {
 
     #[test]
     fn test_clone_url() {
-        let r = GHRepo {
-            owner: "octocat",
-            repo: "repository",
-        };
+        let r = GHRepo::new("octocat", "repository").unwrap();
         assert_eq!(r.clone_url(), "https://github.com/octocat/repository.git");
         assert_eq!(r.clone_url().parse::<GHRepo>(), Ok(r));
     }
 
     #[test]
     fn test_git_url() {
-        let r = GHRepo {
-            owner: "octocat",
-            repo: "repository",
-        };
+        let r = GHRepo::new("octocat", "repository").unwrap();
         assert_eq!(r.git_url(), "git://github.com/octocat/repository.git");
         assert_eq!(r.git_url().parse::<GHRepo>(), Ok(r));
     }
 
     #[test]
     fn test_html_url() {
-        let r = GHRepo {
-            owner: "octocat",
-            repo: "repository",
-        };
+        let r = GHRepo::new("octocat", "repository").unwrap();
         assert_eq!(r.html_url(), "https://github.com/octocat/repository");
         assert_eq!(r.html_url().parse::<GHRepo>(), Ok(r));
     }
 
     #[test]
     fn test_ssh_url() {
-        let r = GHRepo {
-            owner: "octocat",
-            repo: "repository",
-        };
+        let r = GHRepo::new("octocat", "repository").unwrap();
         assert_eq!(r.ssh_url(), "git@github.com:octocat/repository.git");
         assert_eq!(r.ssh_url().parse::<GHRepo>(), Ok(r));
     }
