@@ -243,8 +243,7 @@ pub fn get_current_branch<P: AsRef<Path>>(
     dirpath: Option<P>,
 ) -> Result<String, CurrentBranchError> {
     let mut cmd = Command::new("git");
-    cmd.args(["symbolic-ref", "--short", "-q", "HEAD"])
-        .stderr(Stdio::null());
+    cmd.args(["symbolic-ref", "--short", "-q", "HEAD"]);
     if let Some(p) = dirpath {
         cmd.current_dir(p);
     }
@@ -253,6 +252,80 @@ pub fn get_current_branch<P: AsRef<Path>>(
         Ok(str::from_utf8(&out.stdout)?.trim().to_string())
     } else {
         Err(CurrentBranchError::CommandFailed(out.status))
+    }
+}
+
+#[derive(Debug)]
+pub enum LocalRepoError {
+    CouldNotExecute(io::Error),
+    CommandFailed(ExitStatus),
+    InvalidUtf8(str::Utf8Error),
+    InvalidRemote(ParseError),
+}
+
+impl fmt::Display for LocalRepoError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            LocalRepoError::CouldNotExecute(e) => {
+                write!(f, "Failed to execute Git command: {}", e)
+            }
+            LocalRepoError::CommandFailed(r) => match r.code() {
+                Some(rc) => write!(f, "Git command exited with return code {}", rc),
+                None => write!(f, "Git command was killed by a signal"),
+            },
+            LocalRepoError::InvalidUtf8(e) => {
+                write!(f, "Failed to decode output from Git command: {}", e)
+            }
+            LocalRepoError::InvalidRemote(e) => {
+                write!(f, "Repository remote URL is not a GitHub URL: {}", e)
+            }
+        }
+    }
+}
+
+impl error::Error for LocalRepoError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match self {
+            LocalRepoError::CouldNotExecute(e) => Some(e),
+            LocalRepoError::CommandFailed(_) => None,
+            LocalRepoError::InvalidUtf8(e) => Some(e),
+            LocalRepoError::InvalidRemote(e) => Some(e),
+        }
+    }
+}
+
+impl From<io::Error> for LocalRepoError {
+    fn from(e: io::Error) -> LocalRepoError {
+        LocalRepoError::CouldNotExecute(e)
+    }
+}
+
+impl From<str::Utf8Error> for LocalRepoError {
+    fn from(e: str::Utf8Error) -> LocalRepoError {
+        LocalRepoError::InvalidUtf8(e)
+    }
+}
+
+impl From<ParseError> for LocalRepoError {
+    fn from(e: ParseError) -> LocalRepoError {
+        LocalRepoError::InvalidRemote(e)
+    }
+}
+
+pub fn get_local_repo<P: AsRef<Path>>(
+    dirpath: Option<P>,
+    remote: &str,
+) -> Result<GHRepo, LocalRepoError> {
+    let mut cmd = Command::new("git");
+    cmd.args(["remote", "get-url", "--", remote]);
+    if let Some(p) = dirpath {
+        cmd.current_dir(p);
+    }
+    let out = cmd.output()?;
+    if out.status.success() {
+        Ok(GHRepo::from_url(str::from_utf8(&out.stdout)?.trim())?)
+    } else {
+        Err(LocalRepoError::CommandFailed(out.status))
     }
 }
 
@@ -549,6 +622,61 @@ mod tests {
         assert!(r.success());
         match get_current_branch(Some(tmp_path.path())) {
             Ok(b) if b == "trunk" => (),
+            e => panic!("Got wrong result: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn test_get_local_repo_empty() {
+        if which("git").is_err() {
+            return;
+        }
+        let tmp_path = tempdir().unwrap();
+        match get_local_repo(Some(tmp_path.path()), "origin") {
+            Err(LocalRepoError::CommandFailed(_)) => (),
+            e => panic!("Git command did not fail; got: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn test_get_local_repo_no_remote() {
+        if which("git").is_err() {
+            return;
+        }
+        let tmp_path = tempdir().unwrap();
+        let r = Command::new("git")
+            .args(["-c", "init.defaultBranch=trunk", "init"])
+            .current_dir(tmp_path.path())
+            .status()
+            .unwrap();
+        assert!(r.success());
+        match get_local_repo(Some(tmp_path.path()), "origin") {
+            Err(LocalRepoError::CommandFailed(_)) => (),
+            e => panic!("Git command did not fail; got: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn test_get_local_repo() {
+        if which("git").is_err() {
+            return;
+        }
+        let tmp_path = tempdir().unwrap();
+        let repo = GHRepo::new("octocat", "repository").unwrap();
+        let r = Command::new("git")
+            .args(["-c", "init.defaultBranch=trunk", "init"])
+            .current_dir(tmp_path.path())
+            .status()
+            .unwrap();
+        assert!(r.success());
+        let r = Command::new("git")
+            .args(["remote", "add", "origin", &repo.ssh_url()])
+            .current_dir(tmp_path.path())
+            .status()
+            .unwrap();
+        assert!(r.success());
+        match get_local_repo(Some(tmp_path.path()), "origin") {
+            Ok(lr) if lr == repo => (),
             e => panic!("Got wrong result: {:?}", e),
         }
     }
