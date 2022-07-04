@@ -4,6 +4,9 @@ extern crate lazy_static;
 use regex::Regex;
 use std::error;
 use std::fmt;
+use std::io;
+use std::path::Path;
+use std::process::{Command, Stdio};
 use std::str::FromStr;
 
 #[cfg(test)]
@@ -179,12 +182,25 @@ impl FromStr for GHRepo {
     }
 }
 
+pub fn is_git_repo<P: AsRef<Path>>(dirpath: Option<P>) -> Result<bool, io::Error> {
+    let mut cmd = Command::new("git");
+    cmd.args(["rev-parse", "--git-dir"])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    if let Some(p) = dirpath {
+        cmd.current_dir(p);
+    }
+    return Ok(cmd.status()?.success());
+}
+
 #[cfg(test)]
 mod tests {
-    use super::GHRepo;
+    use super::*;
     use rstest::rstest;
     use rstest_reuse::{apply, template};
     use std::str::FromStr;
+    use tempfile::tempdir;
+    use which::which;
 
     #[test]
     fn test_to_string() {
@@ -418,5 +434,29 @@ mod tests {
     fn test_from_str_with_owner(#[case] spec: &str, #[case] owner: &str, #[case] name: &str) {
         let r = GHRepo::new(owner, name).unwrap();
         assert_eq!(GHRepo::from_str_with_owner(spec, "jwodder"), Ok(r));
+    }
+
+    #[test]
+    fn test_is_git_repo_empty() {
+        if which("git").is_err() {
+            return;
+        }
+        let tmp_path = tempdir().unwrap();
+        assert!(!is_git_repo(Some(tmp_path.path())).unwrap());
+    }
+
+    #[test]
+    fn test_is_git_repo_initted() {
+        if which("git").is_err() {
+            return;
+        }
+        let tmp_path = tempdir().unwrap();
+        let r = Command::new("git")
+            .arg("init")
+            .current_dir(tmp_path.path())
+            .status()
+            .unwrap();
+        assert!(r.success());
+        assert!(is_git_repo(Some(tmp_path.path())).unwrap());
     }
 }
