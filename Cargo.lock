@@ -167,6 +167,7 @@ dependencies = [
  "lazy_static",
  "regex",
  "rstest",
+ "rstest_reuse",
 ]
 
 [[package]]
@@ -285,6 +286,17 @@ checksum = "5015e68a0685a95ade3eee617ff7101ab6a3fc689203101ca16ebc16f2b89c66"
 dependencies = [
  "cfg-if",
  "proc-macro2",
+ "quote",
+ "rustc_version",
+ "syn",
+]
+
+[[package]]
+name = "rstest_reuse"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b29d3117bce27ea307d1fb7ce12c64ba11b3fd04311a42d32bc5f0072e6e3d4d"
+dependencies = [
  "quote",
  "rustc_version",
  "syn",

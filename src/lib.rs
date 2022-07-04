@@ -6,6 +6,9 @@ use std::error;
 use std::fmt;
 use std::str::FromStr;
 
+#[cfg(test)]
+use rstest_reuse;
+
 // Regular expression for a valid GitHub username or organization name.  As of
 // 2017-07-23, trying to sign up to GitHub with an invalid username or create
 // an organization with an invalid name gives the message "Username may only
@@ -172,6 +175,8 @@ impl FromStr for GHRepo {
 mod tests {
     use super::GHRepo;
     use rstest::rstest;
+    use rstest_reuse::{apply, template};
+    use std::str::FromStr;
 
     #[test]
     fn test_to_string() {
@@ -303,5 +308,99 @@ mod tests {
     #[case("steven.Git")]
     fn test_bad_name(#[case] name: &str) {
         assert!(!GHRepo::is_valid_name(name));
+    }
+
+    #[template]
+    #[rstest]
+    #[case("git://github.com/jwodder/headerparser", "jwodder", "headerparser")]
+    #[case("git://github.com/jwodder/headerparser.git", "jwodder", "headerparser")]
+    #[case("git@github.com:jwodder/headerparser", "jwodder", "headerparser")]
+    #[case("git@github.com:jwodder/headerparser.git", "jwodder", "headerparser")]
+    #[case("ssh://git@github.com:jwodder/headerparser", "jwodder", "headerparser")]
+    #[case(
+        "ssh://git@github.com:jwodder/headerparser.git",
+        "jwodder",
+        "headerparser"
+    )]
+    #[case(
+        "https://api.github.com/repos/jwodder/headerparser",
+        "jwodder",
+        "headerparser"
+    )]
+    #[case("https://github.com/jwodder/headerparser", "jwodder", "headerparser")]
+    #[case(
+        "https://github.com/jwodder/headerparser.git",
+        "jwodder",
+        "headerparser"
+    )]
+    #[case("https://github.com/jwodder/headerparser/", "jwodder", "headerparser")]
+    #[case(
+        "https://www.github.com/jwodder/headerparser",
+        "jwodder",
+        "headerparser"
+    )]
+    #[case("http://github.com/jwodder/headerparser", "jwodder", "headerparser")]
+    #[case(
+        "http://www.github.com/jwodder/headerparser",
+        "jwodder",
+        "headerparser"
+    )]
+    #[case("github.com/jwodder/headerparser", "jwodder", "headerparser")]
+    #[case("www.github.com/jwodder/headerparser", "jwodder", "headerparser")]
+    #[case("https://github.com/jwodder/none.git", "jwodder", "none")]
+    #[case(
+        "https://x-access-token:1234567890@github.com/octocat/Hello-World",
+        "octocat",
+        "Hello-World"
+    )]
+    #[case(
+        "https://my.username@github.com/octocat/Hello-World",
+        "octocat",
+        "Hello-World"
+    )]
+    fn repo_urls(#[case] url: &str, owner: &str, name: &str) {}
+
+    #[template]
+    #[rstest]
+    #[case("https://github.com/none/headerparser.git")]
+    #[case("/repo")]
+    #[case("none/repo")]
+    #[case("jwodder/headerparser.git")]
+    #[case("jwodder/headerparser.GIT")]
+    #[case("jwodder/headerparser.Git")]
+    #[case("jwodder/")]
+    #[case("headerparser")]
+    #[case("https://api.github.com/repos/jwodder/headerparser.git")]
+    #[case("https://api.github.com/repos/jwodder/headerparser.git/")]
+    #[case("https://api.github.com/repos/jwodder/headerparser/")]
+    fn bad_repos(#[case] url: &str) {}
+
+    #[apply(repo_urls)]
+    #[case("jwodder/headerparser", "jwodder", "headerparser")]
+    // TODO: #[case("headerparser", "jwodder", "headerparser")]
+    #[case("jwodder/none", "jwodder", "none")]
+    // TODO: #[case("none", "jwodder", "none")]
+    #[case("nonely/headerparser", "nonely", "headerparser")]
+    #[case("none-none/headerparser", "none-none", "headerparser")]
+    #[case("nonenone/headerparser", "nonenone", "headerparser")]
+    fn test_from_str(#[case] spec: &str, #[case] owner: &str, #[case] name: &str) {
+        let r = GHRepo::new(owner, name).unwrap();
+        assert_eq!(GHRepo::from_str(spec), Ok(r));
+    }
+
+    #[apply(bad_repos)]
+    fn test_from_bad_str(#[case] spec: &str) {
+        assert!(GHRepo::from_str(spec).is_err());
+    }
+
+    #[apply(repo_urls)]
+    fn test_from_url(#[case] url: &str, #[case] owner: &str, #[case] name: &str) {
+        let r = GHRepo::new(owner, name).unwrap();
+        assert_eq!(GHRepo::from_url(url), Ok(r));
+    }
+
+    #[apply(bad_repos)]
+    fn test_from_bad_url(#[case] url: &str) {
+        assert!(GHRepo::from_url(url).is_err());
     }
 }

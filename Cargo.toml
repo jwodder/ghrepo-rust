@@ -10,3 +10,4 @@ regex = "1.5.6"
 
 [dev-dependencies]
 rstest = "0.15.0"
+rstest_reuse = "0.3.0"
