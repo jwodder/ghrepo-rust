@@ -6,8 +6,8 @@ use std::error;
 use std::fmt;
 use std::io;
 use std::path::Path;
-use std::process::{Command, Stdio};
-use std::str::FromStr;
+use std::process::{Command, ExitStatus, Stdio};
+use std::str::{self, FromStr};
 
 #[cfg(test)]
 use rstest_reuse;
@@ -191,6 +191,69 @@ pub fn is_git_repo<P: AsRef<Path>>(dirpath: Option<P>) -> Result<bool, io::Error
         cmd.current_dir(p);
     }
     return Ok(cmd.status()?.success());
+}
+
+#[derive(Debug)]
+pub enum CurrentBranchError {
+    CouldNotExecute(io::Error),
+    CommandFailed(ExitStatus),
+    InvalidUtf8(str::Utf8Error),
+}
+
+impl fmt::Display for CurrentBranchError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            CurrentBranchError::CouldNotExecute(e) => {
+                write!(f, "Failed to execute Git command: {}", e)
+            }
+            CurrentBranchError::CommandFailed(r) => match r.code() {
+                Some(rc) => write!(f, "Git command exited with return code {}", rc),
+                None => write!(f, "Git command was killed by a signal"),
+            },
+            CurrentBranchError::InvalidUtf8(e) => {
+                write!(f, "Failed to decode output from Git command: {}", e)
+            }
+        }
+    }
+}
+
+impl error::Error for CurrentBranchError {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
+        match self {
+            CurrentBranchError::CouldNotExecute(e) => Some(e),
+            CurrentBranchError::CommandFailed(_) => None,
+            CurrentBranchError::InvalidUtf8(e) => Some(e),
+        }
+    }
+}
+
+impl From<io::Error> for CurrentBranchError {
+    fn from(e: io::Error) -> CurrentBranchError {
+        CurrentBranchError::CouldNotExecute(e)
+    }
+}
+
+impl From<str::Utf8Error> for CurrentBranchError {
+    fn from(e: str::Utf8Error) -> CurrentBranchError {
+        CurrentBranchError::InvalidUtf8(e)
+    }
+}
+
+pub fn get_current_branch<P: AsRef<Path>>(
+    dirpath: Option<P>,
+) -> Result<String, CurrentBranchError> {
+    let mut cmd = Command::new("git");
+    cmd.args(["symbolic-ref", "--short", "-q", "HEAD"])
+        .stderr(Stdio::null());
+    if let Some(p) = dirpath {
+        cmd.current_dir(p);
+    }
+    let out = cmd.output()?;
+    if out.status.success() {
+        Ok(str::from_utf8(&out.stdout)?.trim().to_string())
+    } else {
+        Err(CurrentBranchError::CommandFailed(out.status))
+    }
 }
 
 #[cfg(test)]
@@ -458,5 +521,35 @@ mod tests {
             .unwrap();
         assert!(r.success());
         assert!(is_git_repo(Some(tmp_path.path())).unwrap());
+    }
+
+    #[test]
+    fn test_get_current_branch_empty() {
+        if which("git").is_err() {
+            return;
+        }
+        let tmp_path = tempdir().unwrap();
+        match get_current_branch(Some(tmp_path.path())) {
+            Err(CurrentBranchError::CommandFailed(_)) => (),
+            e => panic!("Git command did not fail; got: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn test_get_current_branch() {
+        if which("git").is_err() {
+            return;
+        }
+        let tmp_path = tempdir().unwrap();
+        let r = Command::new("git")
+            .args(["-c", "init.defaultBranch=trunk", "init"])
+            .current_dir(tmp_path.path())
+            .status()
+            .unwrap();
+        assert!(r.success());
+        match get_current_branch(Some(tmp_path.path())) {
+            Ok(b) if b == "trunk" => (),
+            e => panic!("Got wrong result: {:?}", e),
+        }
     }
 }
