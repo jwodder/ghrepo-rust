@@ -87,6 +87,14 @@ impl GHRepo {
         RGX.is_match(s) && !s.to_ascii_lowercase().ends_with(".git")
     }
 
+    pub fn from_str_with_owner(s: &str, owner: &str) -> Result<Self, ParseError> {
+        if GHRepo::is_valid_name(s) {
+            GHRepo::new(owner, s)
+        } else {
+            GHRepo::from_str(s)
+        }
+    }
+
     pub fn owner(&self) -> &str {
         &self.owner
     }
@@ -377,9 +385,7 @@ mod tests {
 
     #[apply(repo_urls)]
     #[case("jwodder/headerparser", "jwodder", "headerparser")]
-    // TODO: #[case("headerparser", "jwodder", "headerparser")]
     #[case("jwodder/none", "jwodder", "none")]
-    // TODO: #[case("none", "jwodder", "none")]
     #[case("nonely/headerparser", "nonely", "headerparser")]
     #[case("none-none/headerparser", "none-none", "headerparser")]
     #[case("nonenone/headerparser", "nonenone", "headerparser")]
@@ -402,5 +408,15 @@ mod tests {
     #[apply(bad_repos)]
     fn test_from_bad_url(#[case] url: &str) {
         assert!(GHRepo::from_url(url).is_err());
+    }
+
+    #[rstest]
+    #[case("headerparser", "jwodder", "headerparser")]
+    #[case("none", "jwodder", "none")]
+    #[case("octocat/repository", "octocat", "repository")]
+    #[case("https://github.com/octocat/repository", "octocat", "repository")]
+    fn test_from_str_with_owner(#[case] spec: &str, #[case] owner: &str, #[case] name: &str) {
+        let r = GHRepo::new(owner, name).unwrap();
+        assert_eq!(GHRepo::from_str_with_owner(spec, "jwodder"), Ok(r));
     }
 }
