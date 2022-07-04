@@ -59,14 +59,14 @@ impl GHRepo {
 
     pub fn is_valid_owner(s: &str) -> bool {
         lazy_static! {
-            static ref RGX: Regex = Regex::new(GH_OWNER_RGX).unwrap();
+            static ref RGX: Regex = Regex::new(format!("^{GH_OWNER_RGX}$").as_str()).unwrap();
         }
         RGX.is_match(s) && s.to_ascii_lowercase() != "none"
     }
 
     pub fn is_valid_name(s: &str) -> bool {
         lazy_static! {
-            static ref RGX: Regex = Regex::new(GH_REPO_RGX).unwrap();
+            static ref RGX: Regex = Regex::new(format!("^{GH_REPO_RGX}$").as_str()).unwrap();
         }
         RGX.is_match(s) && !s.ends_with(".git")
     }
@@ -77,10 +77,6 @@ impl GHRepo {
 
     pub fn name(&self) -> &str {
         &self.name
-    }
-
-    pub fn fullname(&self) -> String {
-        self.to_string()
     }
 
     pub fn api_url(&self) -> String {
@@ -107,18 +103,18 @@ impl GHRepo {
         lazy_static! {
             static ref GITHUB_URL_CREGEXEN: [Regex; 4] = [
                 Regex::new(format!(
-                    r"(?:https?://(?:[^@:/]+(?::[^@/]+)?@)?)?(?:www\.)?github\.com/{}(?:\.git)?/?",
+                    r"^(?:https?://(?:[^@:/]+(?::[^@/]+)?@)?)?(?:www\.)?github\.com/{}(?:\.git)?/?$",
                     *OWNER_NAME,
                 ).as_str())
                 .unwrap(),
                 Regex::new(format!(
-                    r"(?:https?://)?api\.github\.com/repos/{}",
+                    r"^(?:https?://)?api\.github\.com/repos/{}$",
                     *OWNER_NAME
                 ).as_str())
                 .unwrap(),
-                Regex::new(format!(r"git://github\.com/{}(?:\.git)?", *OWNER_NAME).as_str()).unwrap(),
+                Regex::new(format!(r"^git://github\.com/{}(?:\.git)?$", *OWNER_NAME).as_str()).unwrap(),
                 Regex::new(format!(
-                    r"(?:ssh://)?git@github\.com:{}(?:\.git)?",
+                    r"^(?:ssh://)?git@github\.com:{}(?:\.git)?$",
                     *OWNER_NAME
                 ).as_str())
                 .unwrap(),
@@ -147,7 +143,7 @@ impl FromStr for GHRepo {
 
     fn from_str(s: &str) -> Result<Self, Error> {
         lazy_static! {
-            static ref RGX: Regex = Regex::new(&*OWNER_NAME).unwrap();
+            static ref RGX: Regex = Regex::new(format!("^{}$", *OWNER_NAME).as_str()).unwrap();
         }
         if let Some(caps) = RGX.captures(s) {
             return GHRepo::new(
@@ -163,7 +159,11 @@ impl FromStr for GHRepo {
 mod tests {
     use super::GHRepo;
 
-    // Test Display stringification
+    #[test]
+    fn test_to_string() {
+        let r = GHRepo::new("octocat", "repository").unwrap();
+        assert_eq!(r.to_string(), "octocat/repository");
+    }
 
     #[test]
     fn test_api_url() {
