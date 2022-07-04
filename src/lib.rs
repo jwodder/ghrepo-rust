@@ -81,7 +81,7 @@ impl GHRepo {
         lazy_static! {
             static ref RGX: Regex = Regex::new(format!("^{GH_REPO_RGX}$").as_str()).unwrap();
         }
-        RGX.is_match(s) && !s.ends_with(".git")
+        RGX.is_match(s) && !s.to_ascii_lowercase().ends_with(".git")
     }
 
     pub fn owner(&self) -> &str {
@@ -299,6 +299,8 @@ mod tests {
     #[case(".git")]
     #[case("")]
     #[case("steven.git")]
+    #[case("steven.GIT")]
+    #[case("steven.Git")]
     fn test_bad_name(#[case] name: &str) {
         assert!(!GHRepo::is_valid_name(name));
     }
