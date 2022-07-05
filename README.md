@@ -1,7 +1,6 @@
 [![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
 [![CI Status](https://github.com/jwodder/ghrepo-rust/actions/workflows/test.yml/badge.svg)](https://github.com/jwodder/ghrepo-rust/actions/workflows/test.yml)
-<!-- [![codecov.io](https://codecov.io/gh/jwodder/ghrepo-rust/branch/master/graph/badge.svg)](https://codecov.io/gh/jwodder/ghrepo-rust) -->
-<!-- [![crates.io](https://img.shields.io/crates/v/ghrepo.svg)](https://crates.io/crates/ghrepo) -->
+[![codecov.io](https://codecov.io/gh/jwodder/ghrepo-rust/branch/master/graph/badge.svg)](https://codecov.io/gh/jwodder/ghrepo-rust)
 [![MIT License](https://img.shields.io/github/license/jwodder/ghrepo.svg)](https://opensource.org/licenses/MIT)
 
 [GitHub](https://github.com/jwodder/ghrepo-rust) <!-- | [crates.io](https://crates.io/crates/ghrepo) --> <!-- | [Documentation](docs.rs/ghrepo) --> | [Issues](https://github.com/jwodder/ghrepo-rust/issues) <!-- | [Changelog](https://github.com/jwodder/ghrepo-rust/blob/master/CHANGELOG.md) -->

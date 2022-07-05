@@ -10,6 +10,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         toolchain:
           - stable
@@ -23,11 +24,29 @@ jobs:
         run: |
           rustup update ${{ matrix.toolchain }}
           rustup default ${{ matrix.toolchain }}
+          rustup component add llvm-tools-preview
+          cargo install grcov
 
       - name: Build crate
         run: cargo build --verbose
+        env:
+          RUSTFLAGS: "-Cinstrument-coverage"
 
       - name: Test crate
         run: cargo test --verbose
+        env:
+          LLVM_PROFILE_FILE: ".coverage/ghrepo-%p-%m.profraw"
+          RUSTFLAGS: "-Cinstrument-coverage"
+
+      - name: Create coverage report
+        run: |
+          grcov --binary-path target/debug -s . -t lcov --branch -o lcov.info \
+            .coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: lcov.info
+          fail_ci_if_error: false
 
 # vim:set et sts=2:
