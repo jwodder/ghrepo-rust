@@ -13,4 +13,5 @@ repos:
     rev: v1.0
     hooks:
       - id: cargo-check
+        args: ["--all-targets"]
       - id: fmt

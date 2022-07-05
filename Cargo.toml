@@ -4,9 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-clap = "3.2.8"
+clap = { version = "3.2.8", default-features = false, features = ["derive", "std", "suggestions", "wrap_help"] }
 lazy_static = "1.4.0"
 regex = "1.5.6"
+serde = "1.0.138"
+serde_json = { version = "1.0.82", features = ["preserve_order"] }
 
 [dev-dependencies]
 rstest = "0.15.0"

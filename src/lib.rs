@@ -1,7 +1,9 @@
 #[macro_use]
 extern crate lazy_static;
 
+use clap::Parser;
 use regex::Regex;
+use serde_json::json;
 use std::error;
 use std::fmt;
 use std::io;
@@ -329,13 +331,48 @@ pub fn get_local_repo<P: AsRef<Path>>(
     }
 }
 
+/// Show current GitHub repository
+#[derive(Debug, Parser)]
+#[clap(version)]
+pub struct Arguments {
+    /// Output JSON
+    #[clap(short = 'J', long)]
+    pub json: bool,
+
+    /// Parse the GitHub URL from the given remote
+    #[clap(short, long, default_value = "origin")]
+    pub remote: String,
+
+    /// Path to a clone of a GitHub repo  [default: current directory]
+    pub dirpath: Option<String>,
+}
+
+pub fn run(args: Arguments) -> Result<String, LocalRepoError> {
+    let r = get_local_repo(args.dirpath, &args.remote)?;
+    if args.json {
+        let dict = json!({
+            "owner": r.owner(),
+            "name": r.name(),
+            "fullname": r.to_string(),
+            "api_url": r.api_url(),
+            "clone_url": r.clone_url(),
+            "git_url": r.git_url(),
+            "html_url": r.html_url(),
+            "ssh_url": r.ssh_url(),
+        });
+        Ok(serde_json::to_string_pretty(&dict).unwrap())
+    } else {
+        Ok(r.to_string())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use rstest::rstest;
     use rstest_reuse::{apply, template};
     use std::str::FromStr;
-    use tempfile::tempdir;
+    use tempfile::{tempdir, TempDir};
     use which::which;
 
     #[test]
@@ -572,6 +609,30 @@ mod tests {
         assert_eq!(GHRepo::from_str_with_owner(spec, "jwodder"), Ok(r));
     }
 
+    fn mkrepo(branch: &str) -> TempDir {
+        let path = tempdir().unwrap();
+        let r = Command::new("git")
+            .arg("-c")
+            .arg(format!("init.defaultBranch={branch}"))
+            .arg("init")
+            .current_dir(path.path())
+            .status()
+            .unwrap();
+        assert!(r.success());
+        return path;
+    }
+
+    fn mkrepo_remote(branch: &str, remote: &str, remote_url: &str) -> TempDir {
+        let path = mkrepo(branch);
+        let r = Command::new("git")
+            .args(["remote", "add", remote, remote_url])
+            .current_dir(path.path())
+            .status()
+            .unwrap();
+        assert!(r.success());
+        return path;
+    }
+
     #[test]
     fn test_is_git_repo_empty() {
         if which("git").is_err() {
@@ -586,13 +647,7 @@ mod tests {
         if which("git").is_err() {
             return;
         }
-        let tmp_path = tempdir().unwrap();
-        let r = Command::new("git")
-            .arg("init")
-            .current_dir(tmp_path.path())
-            .status()
-            .unwrap();
-        assert!(r.success());
+        let tmp_path = mkrepo("main");
         assert!(is_git_repo(Some(tmp_path.path())).unwrap());
     }
 
@@ -613,13 +668,7 @@ mod tests {
         if which("git").is_err() {
             return;
         }
-        let tmp_path = tempdir().unwrap();
-        let r = Command::new("git")
-            .args(["-c", "init.defaultBranch=trunk", "init"])
-            .current_dir(tmp_path.path())
-            .status()
-            .unwrap();
-        assert!(r.success());
+        let tmp_path = mkrepo("trunk");
         match get_current_branch(Some(tmp_path.path())) {
             Ok(b) if b == "trunk" => (),
             e => panic!("Got wrong result: {:?}", e),
@@ -643,13 +692,7 @@ mod tests {
         if which("git").is_err() {
             return;
         }
-        let tmp_path = tempdir().unwrap();
-        let r = Command::new("git")
-            .args(["-c", "init.defaultBranch=trunk", "init"])
-            .current_dir(tmp_path.path())
-            .status()
-            .unwrap();
-        assert!(r.success());
+        let tmp_path = mkrepo("trunk");
         match get_local_repo(Some(tmp_path.path()), "origin") {
             Err(LocalRepoError::CommandFailed(_)) => (),
             e => panic!("Git command did not fail; got: {:?}", e),
@@ -661,22 +704,54 @@ mod tests {
         if which("git").is_err() {
             return;
         }
-        let tmp_path = tempdir().unwrap();
         let repo = GHRepo::new("octocat", "repository").unwrap();
-        let r = Command::new("git")
-            .args(["-c", "init.defaultBranch=trunk", "init"])
-            .current_dir(tmp_path.path())
-            .status()
-            .unwrap();
-        assert!(r.success());
-        let r = Command::new("git")
-            .args(["remote", "add", "origin", &repo.ssh_url()])
-            .current_dir(tmp_path.path())
-            .status()
-            .unwrap();
-        assert!(r.success());
+        let tmp_path = mkrepo_remote("trunk", "origin", &repo.ssh_url());
         match get_local_repo(Some(tmp_path.path()), "origin") {
             Ok(lr) if lr == repo => (),
+            e => panic!("Got wrong result: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn test_run() {
+        if which("git").is_err() {
+            return;
+        }
+        let repo = GHRepo::new("octocat", "repository").unwrap();
+        let tmp_path = mkrepo_remote("trunk", "origin", &repo.ssh_url());
+        match run(Arguments {
+            json: false,
+            remote: "origin".to_string(),
+            dirpath: Some(tmp_path.path().to_str().unwrap().to_string()),
+        }) {
+            Ok(s) if s == "octocat/repository" => (),
+            e => panic!("Got wrong result: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn test_run_json() {
+        if which("git").is_err() {
+            return;
+        }
+        let repo = GHRepo::new("octocat", "repository").unwrap();
+        let expected = "{
+  \"owner\": \"octocat\",
+  \"name\": \"repository\",
+  \"fullname\": \"octocat/repository\",
+  \"api_url\": \"https://api.github.com/repos/octocat/repository\",
+  \"clone_url\": \"https://github.com/octocat/repository.git\",
+  \"git_url\": \"git://github.com/octocat/repository.git\",
+  \"html_url\": \"https://github.com/octocat/repository\",
+  \"ssh_url\": \"git@github.com:octocat/repository.git\"
+}";
+        let tmp_path = mkrepo_remote("trunk", "origin", &repo.ssh_url());
+        match run(Arguments {
+            json: true,
+            remote: "origin".to_string(),
+            dirpath: Some(tmp_path.path().to_str().unwrap().to_string()),
+        }) {
+            Ok(s) if s == expected => (),
             e => panic!("Got wrong result: {:?}", e),
         }
     }
