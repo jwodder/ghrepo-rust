@@ -14,4 +14,6 @@ repos:
     hooks:
       - id: cargo-check
         args: ["--all-targets"]
+      - id: clippy
+        args: ["--all-features"]
       - id: fmt
