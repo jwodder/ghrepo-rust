@@ -15,9 +15,13 @@ jobs:
         run: |
           rustup update stable
           rustup default stable
+          rustup component add clippy
 
       - name: Check code
         run: cargo check --all-targets
+
+      - name: Clippy
+        run: cargo clippy --all-features
 
       - name: Check formatting
         run: cargo fmt -- --write-mode=diff
