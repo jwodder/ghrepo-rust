@@ -2,6 +2,13 @@
 name = "ghrepo"
 version = "0.1.0"
 edition = "2021"
+description = "Parse GitHub repository URLs & specifiers"
+authors = ["John Thorvald Wodder II <ghrepo@varonathe.org>"]
+repository = "https://github.com/jwodder/ghrepo-rust"
+license = "MIT"
+keywords = ["GitHub", "URL parsing", "repository"]
+categories = ["command-line-utilities"]
+exclude = ["/.*"]
 
 [dependencies]
 clap = { version = "3.2.8", default-features = false, features = ["derive", "std", "suggestions", "wrap_help"] }
