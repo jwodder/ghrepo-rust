@@ -19,6 +19,6 @@ serde_json = { version = "1.0.82", features = ["preserve_order"] }
 
 [dev-dependencies]
 rstest = "0.15.0"
-rstest_reuse = "0.3.0"
+rstest_reuse = "0.4.0"
 tempfile = "3.3.0"
 which = "4.2.5"
