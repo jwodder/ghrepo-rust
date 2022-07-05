@@ -24,6 +24,6 @@ jobs:
         run: cargo clippy --all-features
 
       - name: Check formatting
-        run: cargo fmt -- --write-mode=diff
+        run: cargo fmt --check
 
 # vim:set et sts=2:
