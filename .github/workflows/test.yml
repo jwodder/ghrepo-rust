@@ -41,6 +41,7 @@ jobs:
       - name: Create coverage report
         run: |
           grcov --binary-path target/debug -s . -t lcov --branch -o lcov.info \
+            --excl-start 'mod tests \{' \
             .coverage
 
       - name: Upload coverage to Codecov
