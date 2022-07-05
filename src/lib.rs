@@ -10,19 +10,23 @@
 //! couple of other useful Git repository inspection functions.
 //!
 //! ```
+//! # use std::error::Error;
 //! # use std::str::FromStr;
 //! # use ghrepo::GHRepo;
-//! let repo = GHRepo::new("octocat", "repository").unwrap();
+//! # fn main() -> Result<(), Box<dyn Error>> {
+//! let repo = GHRepo::new("octocat", "repository")?;
 //! assert_eq!(repo.owner(), "octocat");
 //! assert_eq!(repo.name(), "repository");
 //! assert_eq!(repo.to_string(), "octocat/repository");
 //! assert_eq!(repo.html_url(), "https://github.com/octocat/repository");
 //!
-//! let repo2 = GHRepo::from_str("octocat/repository").unwrap();
+//! let repo2 = GHRepo::from_str("octocat/repository")?;
 //! assert_eq!(repo, repo2);
 //!
-//! let repo3 = GHRepo::from_str("https://github.com/octocat/repository").unwrap();
+//! let repo3 = GHRepo::from_str("https://github.com/octocat/repository")?;
 //! assert_eq!(repo, repo3);
+//! #     Ok(())
+//! # }
 //! ```
 
 #[macro_use]
@@ -172,14 +176,18 @@ impl GHRepo {
     /// name without an owner, the owner will be set to `owner`
     ///
     /// ```
+    /// # use std::error::Error;
     /// # use ghrepo::GHRepo;
-    /// let repo = GHRepo::from_str_with_owner("octocat/repository", "foobar").unwrap();
+    /// # fn main() -> Result<(), Box<dyn Error>> {
+    /// let repo = GHRepo::from_str_with_owner("octocat/repository", "foobar")?;
     /// assert_eq!(repo.owner(), "octocat");
     /// assert_eq!(repo.name(), "repository");
     ///
-    /// let repo = GHRepo::from_str_with_owner("repository", "foobar").unwrap();
+    /// let repo = GHRepo::from_str_with_owner("repository", "foobar")?;
     /// assert_eq!(repo.owner(), "foobar");
     /// assert_eq!(repo.name(), "repository");
+    /// #     Ok(())
+    /// # }
     /// ```
     pub fn from_str_with_owner(s: &str, owner: &str) -> Result<Self, ParseError> {
         if GHRepo::is_valid_name(s) {
