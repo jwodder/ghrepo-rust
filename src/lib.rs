@@ -262,7 +262,7 @@ impl GHRepo {
                 );
             }
         }
-        return Err(ParseError::InvalidSpec(s.to_string()));
+        Err(ParseError::InvalidSpec(s.to_string()))
     }
 }
 
@@ -288,7 +288,7 @@ impl FromStr for GHRepo {
                 caps.name("name").unwrap().as_str(),
             );
         }
-        return GHRepo::from_url(s);
+        GHRepo::from_url(s)
     }
 }
 
@@ -306,7 +306,7 @@ pub fn is_git_repo<P: AsRef<Path>>(dirpath: Option<P>) -> Result<bool, io::Error
     if let Some(p) = dirpath {
         cmd.current_dir(p);
     }
-    return Ok(cmd.status()?.success());
+    Ok(cmd.status()?.success())
 }
 
 /// Error raised when [`get_current_branch()`] fails
