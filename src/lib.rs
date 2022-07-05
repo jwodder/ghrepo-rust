@@ -152,6 +152,7 @@ impl GHRepo {
     /// assert!(GHRepo::is_valid_owner("octocat"));
     /// assert!(GHRepo::is_valid_owner("octo-cat"));
     /// assert!(!GHRepo::is_valid_owner("octo.cat"));
+    /// assert!(!GHRepo::is_valid_owner("octocat/repository"));
     /// assert!(!GHRepo::is_valid_owner("none"));
     /// ```
     pub fn is_valid_owner(s: &str) -> bool {
@@ -169,6 +170,7 @@ impl GHRepo {
     /// # use ghrepo::GHRepo;
     /// assert!(GHRepo::is_valid_name("my-repo"));
     /// assert!(!GHRepo::is_valid_name("my-repo.git"));
+    /// assert!(!GHRepo::is_valid_owner("octocat/my-repo"));
     /// ```
     pub fn is_valid_name(s: &str) -> bool {
         lazy_static! {
@@ -332,7 +334,7 @@ impl FromStr for GHRepo {
 /// # Errors
 ///
 /// Returns a [`std::io::Error`] if the invoked Git commit fails to execute
-pub fn is_git_repo<P: AsRef<Path>>(dirpath: Option<P>) -> Result<bool, io::Error> {
+pub fn is_git_repo<P: AsRef<Path>>(dirpath: &Option<P>) -> Result<bool, io::Error> {
     let mut cmd = Command::new("git");
     cmd.args(["rev-parse", "--git-dir"])
         .stdout(Stdio::null())
@@ -405,7 +407,7 @@ impl From<str::Utf8Error> for CurrentBranchError {
 /// Returns a [`CurrentBranchError`] if the invoked Git commit fails to execute
 /// or returns a nonzero status, or if the command's output is invalid UTF-8
 pub fn get_current_branch<P: AsRef<Path>>(
-    dirpath: Option<P>,
+    dirpath: &Option<P>,
 ) -> Result<String, CurrentBranchError> {
     let mut cmd = Command::new("git");
     cmd.args(["symbolic-ref", "--short", "-q", "HEAD"]);
@@ -496,7 +498,7 @@ impl From<ParseError> for LocalRepoError {
 /// or returns a nonzero status, if the command's output is invalid UTF-8, or
 /// if the URL for the given remote is not a valid GitHub URL
 pub fn get_local_repo<P: AsRef<Path>>(
-    dirpath: Option<P>,
+    dirpath: &Option<P>,
     remote: &str,
 ) -> Result<GHRepo, LocalRepoError> {
     let mut cmd = Command::new("git");
@@ -531,8 +533,8 @@ pub struct Arguments {
 
 #[doc(hidden)]
 /// The implementation of the command-line interface
-pub fn run(args: Arguments) -> Result<String, LocalRepoError> {
-    let r = get_local_repo(args.dirpath, &args.remote)?;
+pub fn run(args: &Arguments) -> Result<String, LocalRepoError> {
+    let r = get_local_repo(&args.dirpath, &args.remote)?;
     if args.json {
         let dict = json!({
             "owner": r.owner(),
@@ -823,7 +825,7 @@ mod tests {
             return;
         }
         let tmp_path = tempdir().unwrap();
-        assert!(!is_git_repo(Some(tmp_path.path())).unwrap());
+        assert!(!is_git_repo(&Some(tmp_path.path())).unwrap());
     }
 
     #[test]
@@ -832,7 +834,7 @@ mod tests {
             return;
         }
         let tmp_path = mkrepo("main");
-        assert!(is_git_repo(Some(tmp_path.path())).unwrap());
+        assert!(is_git_repo(&Some(tmp_path.path())).unwrap());
     }
 
     #[test]
@@ -841,7 +843,7 @@ mod tests {
             return;
         }
         let tmp_path = tempdir().unwrap();
-        match get_current_branch(Some(tmp_path.path())) {
+        match get_current_branch(&Some(tmp_path.path())) {
             Err(CurrentBranchError::CommandFailed(_)) => (),
             e => panic!("Git command did not fail; got: {:?}", e),
         }
@@ -853,7 +855,7 @@ mod tests {
             return;
         }
         let tmp_path = mkrepo("trunk");
-        match get_current_branch(Some(tmp_path.path())) {
+        match get_current_branch(&Some(tmp_path.path())) {
             Ok(b) if b == "trunk" => (),
             e => panic!("Got wrong result: {:?}", e),
         }
@@ -865,7 +867,7 @@ mod tests {
             return;
         }
         let tmp_path = tempdir().unwrap();
-        match get_local_repo(Some(tmp_path.path()), "origin") {
+        match get_local_repo(&Some(tmp_path.path()), "origin") {
             Err(LocalRepoError::CommandFailed(_)) => (),
             e => panic!("Git command did not fail; got: {:?}", e),
         }
@@ -877,7 +879,7 @@ mod tests {
             return;
         }
         let tmp_path = mkrepo("trunk");
-        match get_local_repo(Some(tmp_path.path()), "origin") {
+        match get_local_repo(&Some(tmp_path.path()), "origin") {
             Err(LocalRepoError::CommandFailed(_)) => (),
             e => panic!("Git command did not fail; got: {:?}", e),
         }
@@ -890,7 +892,7 @@ mod tests {
         }
         let repo = GHRepo::new("octocat", "repository").unwrap();
         let tmp_path = mkrepo_remote("trunk", "origin", &repo.ssh_url());
-        match get_local_repo(Some(tmp_path.path()), "origin") {
+        match get_local_repo(&Some(tmp_path.path()), "origin") {
             Ok(lr) if lr == repo => (),
             e => panic!("Got wrong result: {:?}", e),
         }
@@ -903,11 +905,12 @@ mod tests {
         }
         let repo = GHRepo::new("octocat", "repository").unwrap();
         let tmp_path = mkrepo_remote("trunk", "origin", &repo.ssh_url());
-        match run(Arguments {
+        let args = Arguments {
             json: false,
             remote: "origin".to_string(),
             dirpath: Some(tmp_path.path().to_str().unwrap().to_string()),
-        }) {
+        };
+        match run(&args) {
             Ok(s) if s == "octocat/repository" => (),
             e => panic!("Got wrong result: {:?}", e),
         }
@@ -930,11 +933,12 @@ mod tests {
   \"ssh_url\": \"git@github.com:octocat/repository.git\"
 }";
         let tmp_path = mkrepo_remote("trunk", "origin", &repo.ssh_url());
-        match run(Arguments {
+        let args = Arguments {
             json: true,
             remote: "origin".to_string(),
             dirpath: Some(tmp_path.path().to_str().unwrap().to_string()),
-        }) {
+        };
+        match run(&args) {
             Ok(s) if s == expected => (),
             e => panic!("Got wrong result: {:?}", e),
         }
