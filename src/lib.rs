@@ -78,7 +78,7 @@ lazy_static! {
     static ref OWNER_NAME: String = format!(r"(?P<owner>{})/(?P<name>{})", GH_OWNER_RGX, GH_REPO_RGX);
 }
 
-/// Error raised when trying to construct a [`GHRepo`] with invalid arguments
+/// Error returned when trying to construct a [`GHRepo`] with invalid arguments
 /// or parse an invalid repository spec
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ParseError {
@@ -121,6 +121,11 @@ pub struct GHRepo {
 
 impl GHRepo {
     /// Construct a [`GHRepo`] with the given owner and repository name
+    ///
+    /// # Errors
+    ///
+    /// If `owner` is not a valid GitHub owner name, or if `name` is not a
+    /// valid GitHub repository name, returns [`ParseError`].
     pub fn new(owner: &str, name: &str) -> Result<Self, ParseError> {
         if !GHRepo::is_valid_owner(owner) {
             Err(ParseError::InvalidOwner(owner.to_string()))
@@ -174,6 +179,13 @@ impl GHRepo {
 
     /// Like [`GHRepo::from_str()`], except that if `s` is just a repository
     /// name without an owner, the owner will be set to `owner`
+    ///
+    /// # Errors
+    /// Returns a [`ParseError`] for the same circumstances as
+    /// [`GHRepo::from_str`], or if `s` is a valid repository name but `owner`
+    /// is not a valid owner name
+    ///
+    /// # Example
     ///
     /// ```
     /// # use std::error::Error;
@@ -241,6 +253,11 @@ impl GHRepo {
     /// - `[https://]api.github.com/repos/<owner>/<name>`
     /// - `git://github.com/<owner>/<name>[.git]`
     /// - `[ssh://]git@github.com:<owner>/<name>[.git]`
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ParseError`] if the given URL is not in one of the above
+    /// formats
     pub fn from_url(s: &str) -> Result<Self, ParseError> {
         lazy_static! {
             static ref GITHUB_URL_CREGEXEN: [Regex; 4] = [
@@ -283,9 +300,14 @@ impl fmt::Display for GHRepo {
 impl FromStr for GHRepo {
     type Err = ParseError;
 
-    /// Parse a GitHub repository specified.  This can be either a URL (as
+    /// Parse a GitHub repository specifier.  This can be either a URL (as
     /// accepted by [`GHRepo::from_url()`]) or a string in the form
     /// `{owner}/{name}`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ParseError`] if `s` is not a valid URL or repository
+    /// specifier
     fn from_str(s: &str) -> Result<Self, ParseError> {
         lazy_static! {
             static ref RGX: Regex = Regex::new(format!("^{}$", *OWNER_NAME).as_str()).unwrap();
@@ -306,6 +328,10 @@ impl FromStr for GHRepo {
 /// This function requires Git to be installed in order to work.  I am not
 /// certain of the minimal viable Git version, but it should work with any Git
 /// as least as far back as version 1.7.
+///
+/// # Errors
+///
+/// Returns a [`std::io::Error`] if the invoked Git commit fails to execute
 pub fn is_git_repo<P: AsRef<Path>>(dirpath: Option<P>) -> Result<bool, io::Error> {
     let mut cmd = Command::new("git");
     cmd.args(["rev-parse", "--git-dir"])
@@ -317,14 +343,14 @@ pub fn is_git_repo<P: AsRef<Path>>(dirpath: Option<P>) -> Result<bool, io::Error
     Ok(cmd.status()?.success())
 }
 
-/// Error raised when [`get_current_branch()`] fails
+/// Error returned when [`get_current_branch()`] fails
 #[derive(Debug)]
 pub enum CurrentBranchError {
-    /// Raised when the Git command could not be executed
+    /// Returned when the Git command could not be executed
     CouldNotExecute(io::Error),
-    /// Raised when the Git command returned nonzero
+    /// Returned when the Git command returned nonzero
     CommandFailed(ExitStatus),
-    /// Raised when the output from Git could not be decoded
+    /// Returned when the output from Git could not be decoded
     InvalidUtf8(str::Utf8Error),
 }
 
@@ -373,6 +399,11 @@ impl From<str::Utf8Error> for CurrentBranchError {
 /// This function requires Git to be installed in order to work.  I am not
 /// certain of the minimal viable Git version, but it should work with any Git
 /// as least as far back as version 1.7.
+///
+/// # Errors
+///
+/// Returns a [`CurrentBranchError`] if the invoked Git commit fails to execute
+/// or returns a nonzero status, or if the command's output is invalid UTF-8
 pub fn get_current_branch<P: AsRef<Path>>(
     dirpath: Option<P>,
 ) -> Result<String, CurrentBranchError> {
@@ -389,16 +420,16 @@ pub fn get_current_branch<P: AsRef<Path>>(
     }
 }
 
-/// Error raised when [`get_local_repo()`] fails
+/// Error returned when [`get_local_repo()`] fails
 #[derive(Debug)]
 pub enum LocalRepoError {
-    /// Raised when the Git command could not be executed
+    /// Returned when the Git command could not be executed
     CouldNotExecute(io::Error),
-    /// Raised when the Git command returned nonzero
+    /// Returned when the Git command returned nonzero
     CommandFailed(ExitStatus),
-    /// Raised when the output from Git could not be decoded
+    /// Returned when the output from Git could not be decoded
     InvalidUtf8(str::Utf8Error),
-    /// Raised when the remote URL is not a GitHub URL
+    /// Returned when the remote URL is not a GitHub URL
     InvalidRemoteURL(ParseError),
 }
 
@@ -458,6 +489,12 @@ impl From<ParseError> for LocalRepoError {
 /// This function requires Git to be installed in order to work.  I am not
 /// certain of the minimal viable Git version, but it should work with any Git
 /// as least as far back as version 1.7.
+///
+/// # Errors
+///
+/// Returns a [`LocalRepoError`] if the invoked Git commit fails to execute
+/// or returns a nonzero status, if the command's output is invalid UTF-8, or
+/// if the URL for the given remote is not a valid GitHub URL
 pub fn get_local_repo<P: AsRef<Path>>(
     dirpath: Option<P>,
     remote: &str,
