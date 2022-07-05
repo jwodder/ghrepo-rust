@@ -1,0 +1,25 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Install Rust
+        run: |
+          rustup update stable
+          rustup default stable
+
+      - name: Check code
+        run: cargo check --all-targets
+
+      - name: Check formatting
+        run: cargo fmt -- --write-mode=diff
+
+# vim:set et sts=2:

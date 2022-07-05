@@ -1,3 +1,5 @@
+#![warn(warnings)]
+
 use clap::Parser;
 use ghrepo::{run, Arguments};
 use std::process::exit;
