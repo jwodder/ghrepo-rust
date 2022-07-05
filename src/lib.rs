@@ -292,6 +292,10 @@ impl FromStr for GHRepo {
 
 /// Tests whether the given directory (default: the current directory) is
 /// either a Git repository or contained in one
+///
+/// This function requires Git to be installed in order to work.  I am not
+/// certain of the minimal viable Git version, but it should work with any Git
+/// as least as far back as version 1.7.
 pub fn is_git_repo<P: AsRef<Path>>(dirpath: Option<P>) -> Result<bool, io::Error> {
     let mut cmd = Command::new("git");
     cmd.args(["rev-parse", "--git-dir"])
@@ -355,6 +359,10 @@ impl From<str::Utf8Error> for CurrentBranchError {
 
 /// Get the current branch for the Git repository located at or containing the
 /// directory `dirpath` (default: the current directory)
+///
+/// This function requires Git to be installed in order to work.  I am not
+/// certain of the minimal viable Git version, but it should work with any Git
+/// as least as far back as version 1.7.
 pub fn get_current_branch<P: AsRef<Path>>(
     dirpath: Option<P>,
 ) -> Result<String, CurrentBranchError> {
@@ -436,6 +444,10 @@ impl From<ParseError> for LocalRepoError {
 /// Determine the GitHub repository for the Git repository located at or
 /// containing the directory `dirpath` (default: the current directory) by
 /// parsing the URL for the specified remote
+///
+/// This function requires Git to be installed in order to work.  I am not
+/// certain of the minimal viable Git version, but it should work with any Git
+/// as least as far back as version 1.7.
 pub fn get_local_repo<P: AsRef<Path>>(
     dirpath: Option<P>,
     remote: &str,
