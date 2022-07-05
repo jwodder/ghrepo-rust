@@ -5,9 +5,9 @@
 //! `ghrepo` extracts a GitHub repository's owner & name from various GitHub
 //! URL formats (or just from a string of the form `OWNER/REPONAME` or
 //! `REPONAME`), and the resulting object provides properties for going in
-//! reverse to determine the possible URLs.  Also included is a function for
-//! determining the GitHub owner & name for a local Git repository, plus a
-//! couple of other useful Git repository inspection functions.
+//! reverse to determine the possible URLs.  Also included is a struct for
+//! performing a couple useful inspections on local Git repositories, including
+//! determining the corresponding GitHub owner & repository name.
 //!
 //! ```
 //! # use std::error::Error;
@@ -35,10 +35,11 @@ extern crate lazy_static;
 use clap::Parser;
 use regex::Regex;
 use serde_json::json;
+use std::env;
 use std::error;
 use std::fmt;
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
 use std::str::{self, FromStr};
 
@@ -324,28 +325,111 @@ impl FromStr for GHRepo {
     }
 }
 
-/// Tests whether the given directory (default: the current directory) is
-/// either a Git repository or contained in one
+/// A local Git repository.
 ///
-/// This function requires Git to be installed in order to work.  I am not
-/// certain of the minimal viable Git version, but it should work with any Git
-/// as least as far back as version 1.7.
+/// This struct provides a small number of methods for inspecting a local Git
+/// repository, generally with the goal of determining the GitHub repository
+/// that it's a clone of.
 ///
-/// # Errors
-///
-/// Returns a [`std::io::Error`] if the invoked Git commit fails to execute
-pub fn is_git_repo<P: AsRef<Path>>(dirpath: &Option<P>) -> Result<bool, io::Error> {
-    let mut cmd = Command::new("git");
-    cmd.args(["rev-parse", "--git-dir"])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null());
-    if let Some(p) = dirpath {
-        cmd.current_dir(p);
-    }
-    Ok(cmd.status()?.success())
+/// The custom methods all require Git to be installed in order to work.  I am
+/// not certain of the minimal viable Git version, but they should work with
+/// any Git as least as far back as version 1.7.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub struct LocalRepo {
+    path: PathBuf,
 }
 
-/// Error returned when [`get_current_branch()`] fails
+impl LocalRepo {
+    /// Create a [`LocalRepo`] for operating on the repository at or containing
+    /// the directory `dirpath`.
+    ///
+    /// No validation is done as to whether `dirpath` is a Git repository or
+    /// even an extant directory.
+    pub fn new<P: AsRef<Path>>(dirpath: P) -> Self {
+        LocalRepo {
+            path: dirpath.as_ref().to_path_buf(),
+        }
+    }
+
+    /// Create a [`LocalRepo`] for operating on the repository at or containing
+    /// the current directory.
+    ///
+    /// The path to the current directory is saved at the time the function is
+    /// called; thus, if the current directory changes later, the `LocalRepo`
+    /// will continue to operate on the original directory.
+    ///
+    /// # Errors
+    ///
+    /// Returns failures from [`std::env::current_dir()`]
+    pub fn for_cwd() -> Result<Self, io::Error> {
+        Ok(LocalRepo {
+            path: env::current_dir()?,
+        })
+    }
+
+    /// Returns the path that was given to [`LocalRepo::new()`] or obtained by
+    /// [`LocalRepo::for_cwd()`]
+    pub fn path(&self) -> &Path {
+        self.path.as_path()
+    }
+
+    /// Tests whether the directory is either a Git repository or contained in
+    /// one
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`std::io::Error`] if the invoked Git commit fails to execute
+    pub fn is_git_repo(&self) -> Result<bool, io::Error> {
+        Ok(Command::new("git")
+            .args(["rev-parse", "--git-dir"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .current_dir(&self.path)
+            .status()?
+            .success())
+    }
+
+    /// Get the current branch of the repository
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`CurrentBranchError`] if the invoked Git commit fails to
+    /// execute or returns a nonzero status, or if the command's output is
+    /// invalid UTF-8
+    pub fn current_branch(&self) -> Result<String, CurrentBranchError> {
+        let out = Command::new("git")
+            .args(["symbolic-ref", "--short", "-q", "HEAD"])
+            .current_dir(&self.path)
+            .output()?;
+        if out.status.success() {
+            Ok(str::from_utf8(&out.stdout)?.trim().to_string())
+        } else {
+            Err(CurrentBranchError::CommandFailed(out.status))
+        }
+    }
+
+    /// Determines the GitHub repository that the local repository is a clone
+    /// of by parsing the URL for the specified Git remote
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`GitHubRemoteError`] if the invoked Git commit fails to
+    /// execute or returns a nonzero status, if the command's output is invalid
+    /// UTF-8, or if the URL for the given remote is not a valid GitHub URL
+    pub fn github_remote(&self, remote: &str) -> Result<GHRepo, GitHubRemoteError> {
+        let out = Command::new("git")
+            .args(["remote", "get-url", "--", remote])
+            .current_dir(&self.path)
+            .output()?;
+        if out.status.success() {
+            Ok(GHRepo::from_url(str::from_utf8(&out.stdout)?.trim())?)
+        } else {
+            Err(GitHubRemoteError::CommandFailed(out.status))
+        }
+    }
+}
+
+/// Error returned when [`LocalRepo::current_branch()`] fails
 #[derive(Debug)]
 pub enum CurrentBranchError {
     /// Returned when the Git command could not be executed
@@ -395,36 +479,9 @@ impl From<str::Utf8Error> for CurrentBranchError {
     }
 }
 
-/// Get the current branch for the Git repository located at or containing the
-/// directory `dirpath` (default: the current directory)
-///
-/// This function requires Git to be installed in order to work.  I am not
-/// certain of the minimal viable Git version, but it should work with any Git
-/// as least as far back as version 1.7.
-///
-/// # Errors
-///
-/// Returns a [`CurrentBranchError`] if the invoked Git commit fails to execute
-/// or returns a nonzero status, or if the command's output is invalid UTF-8
-pub fn get_current_branch<P: AsRef<Path>>(
-    dirpath: &Option<P>,
-) -> Result<String, CurrentBranchError> {
-    let mut cmd = Command::new("git");
-    cmd.args(["symbolic-ref", "--short", "-q", "HEAD"]);
-    if let Some(p) = dirpath {
-        cmd.current_dir(p);
-    }
-    let out = cmd.output()?;
-    if out.status.success() {
-        Ok(str::from_utf8(&out.stdout)?.trim().to_string())
-    } else {
-        Err(CurrentBranchError::CommandFailed(out.status))
-    }
-}
-
-/// Error returned when [`get_local_repo()`] fails
+/// Error returned when [`LocalRepo::github_remote()`] fails
 #[derive(Debug)]
-pub enum LocalRepoError {
+pub enum GitHubRemoteError {
     /// Returned when the Git command could not be executed
     CouldNotExecute(io::Error),
     /// Returned when the Git command returned nonzero
@@ -435,82 +492,52 @@ pub enum LocalRepoError {
     InvalidRemoteURL(ParseError),
 }
 
-impl fmt::Display for LocalRepoError {
+impl fmt::Display for GitHubRemoteError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            LocalRepoError::CouldNotExecute(e) => {
+            GitHubRemoteError::CouldNotExecute(e) => {
                 write!(f, "Failed to execute Git command: {}", e)
             }
-            LocalRepoError::CommandFailed(r) => match r.code() {
+            GitHubRemoteError::CommandFailed(r) => match r.code() {
                 Some(rc) => write!(f, "Git command exited with return code {}", rc),
                 None => write!(f, "Git command was killed by a signal"),
             },
-            LocalRepoError::InvalidUtf8(e) => {
+            GitHubRemoteError::InvalidUtf8(e) => {
                 write!(f, "Failed to decode output from Git command: {}", e)
             }
-            LocalRepoError::InvalidRemoteURL(e) => {
+            GitHubRemoteError::InvalidRemoteURL(e) => {
                 write!(f, "Repository remote URL is not a GitHub URL: {}", e)
             }
         }
     }
 }
 
-impl error::Error for LocalRepoError {
+impl error::Error for GitHubRemoteError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
-            LocalRepoError::CouldNotExecute(e) => Some(e),
-            LocalRepoError::CommandFailed(_) => None,
-            LocalRepoError::InvalidUtf8(e) => Some(e),
-            LocalRepoError::InvalidRemoteURL(e) => Some(e),
+            GitHubRemoteError::CouldNotExecute(e) => Some(e),
+            GitHubRemoteError::CommandFailed(_) => None,
+            GitHubRemoteError::InvalidUtf8(e) => Some(e),
+            GitHubRemoteError::InvalidRemoteURL(e) => Some(e),
         }
     }
 }
 
-impl From<io::Error> for LocalRepoError {
-    fn from(e: io::Error) -> LocalRepoError {
-        LocalRepoError::CouldNotExecute(e)
+impl From<io::Error> for GitHubRemoteError {
+    fn from(e: io::Error) -> GitHubRemoteError {
+        GitHubRemoteError::CouldNotExecute(e)
     }
 }
 
-impl From<str::Utf8Error> for LocalRepoError {
-    fn from(e: str::Utf8Error) -> LocalRepoError {
-        LocalRepoError::InvalidUtf8(e)
+impl From<str::Utf8Error> for GitHubRemoteError {
+    fn from(e: str::Utf8Error) -> GitHubRemoteError {
+        GitHubRemoteError::InvalidUtf8(e)
     }
 }
 
-impl From<ParseError> for LocalRepoError {
-    fn from(e: ParseError) -> LocalRepoError {
-        LocalRepoError::InvalidRemoteURL(e)
-    }
-}
-
-/// Determine the GitHub repository for the Git repository located at or
-/// containing the directory `dirpath` (default: the current directory) by
-/// parsing the URL for the specified remote
-///
-/// This function requires Git to be installed in order to work.  I am not
-/// certain of the minimal viable Git version, but it should work with any Git
-/// as least as far back as version 1.7.
-///
-/// # Errors
-///
-/// Returns a [`LocalRepoError`] if the invoked Git commit fails to execute
-/// or returns a nonzero status, if the command's output is invalid UTF-8, or
-/// if the URL for the given remote is not a valid GitHub URL
-pub fn get_local_repo<P: AsRef<Path>>(
-    dirpath: &Option<P>,
-    remote: &str,
-) -> Result<GHRepo, LocalRepoError> {
-    let mut cmd = Command::new("git");
-    cmd.args(["remote", "get-url", "--", remote]);
-    if let Some(p) = dirpath {
-        cmd.current_dir(p);
-    }
-    let out = cmd.output()?;
-    if out.status.success() {
-        Ok(GHRepo::from_url(str::from_utf8(&out.stdout)?.trim())?)
-    } else {
-        Err(LocalRepoError::CommandFailed(out.status))
+impl From<ParseError> for GitHubRemoteError {
+    fn from(e: ParseError) -> GitHubRemoteError {
+        GitHubRemoteError::InvalidRemoteURL(e)
     }
 }
 
@@ -533,22 +560,26 @@ pub struct Arguments {
 
 #[doc(hidden)]
 /// The implementation of the command-line interface
-pub fn run(args: &Arguments) -> Result<String, LocalRepoError> {
-    let r = get_local_repo(&args.dirpath, &args.remote)?;
+pub fn run(args: &Arguments) -> Result<String, GitHubRemoteError> {
+    let lr = match &args.dirpath {
+        Some(p) => LocalRepo::new(&p),
+        None => LocalRepo::for_cwd()?,
+    };
+    let gr = lr.github_remote(&args.remote)?;
     if args.json {
-        let dict = json!({
-            "owner": r.owner(),
-            "name": r.name(),
-            "fullname": r.to_string(),
-            "api_url": r.api_url(),
-            "clone_url": r.clone_url(),
-            "git_url": r.git_url(),
-            "html_url": r.html_url(),
-            "ssh_url": r.ssh_url(),
+        let data = json!({
+            "owner": gr.owner(),
+            "name": gr.name(),
+            "fullname": gr.to_string(),
+            "api_url": gr.api_url(),
+            "clone_url": gr.clone_url(),
+            "git_url": gr.git_url(),
+            "html_url": gr.html_url(),
+            "ssh_url": gr.ssh_url(),
         });
-        Ok(serde_json::to_string_pretty(&dict).unwrap())
+        Ok(serde_json::to_string_pretty(&data).unwrap())
     } else {
-        Ok(r.to_string())
+        Ok(gr.to_string())
     }
 }
 
@@ -820,12 +851,26 @@ mod tests {
     }
 
     #[test]
+    fn test_local_repo_new() {
+        let lr = LocalRepo::new("/path/to/repo");
+        assert_eq!(lr.path().to_str().unwrap(), "/path/to/repo");
+    }
+
+    #[test]
+    fn test_local_repo_for_cwd() {
+        let lr = LocalRepo::for_cwd().unwrap();
+        let cwd = env::current_dir().unwrap();
+        assert_eq!(lr.path().to_path_buf(), cwd);
+    }
+
+    #[test]
     fn test_is_git_repo_empty() {
         if which("git").is_err() {
             return;
         }
         let tmp_path = tempdir().unwrap();
-        assert!(!is_git_repo(&Some(tmp_path.path())).unwrap());
+        let lr = LocalRepo::new(tmp_path.path());
+        assert!(!lr.is_git_repo().unwrap());
     }
 
     #[test]
@@ -834,7 +879,8 @@ mod tests {
             return;
         }
         let tmp_path = mkrepo("main");
-        assert!(is_git_repo(&Some(tmp_path.path())).unwrap());
+        let lr = LocalRepo::new(tmp_path.path());
+        assert!(lr.is_git_repo().unwrap());
     }
 
     #[test]
@@ -843,7 +889,8 @@ mod tests {
             return;
         }
         let tmp_path = tempdir().unwrap();
-        match get_current_branch(&Some(tmp_path.path())) {
+        let lr = LocalRepo::new(tmp_path.path());
+        match lr.current_branch() {
             Err(CurrentBranchError::CommandFailed(_)) => (),
             e => panic!("Git command did not fail; got: {:?}", e),
         }
@@ -855,7 +902,8 @@ mod tests {
             return;
         }
         let tmp_path = mkrepo("trunk");
-        match get_current_branch(&Some(tmp_path.path())) {
+        let lr = LocalRepo::new(tmp_path.path());
+        match lr.current_branch() {
             Ok(b) if b == "trunk" => (),
             e => panic!("Got wrong result: {:?}", e),
         }
@@ -867,8 +915,9 @@ mod tests {
             return;
         }
         let tmp_path = tempdir().unwrap();
-        match get_local_repo(&Some(tmp_path.path()), "origin") {
-            Err(LocalRepoError::CommandFailed(_)) => (),
+        let lr = LocalRepo::new(tmp_path.path());
+        match lr.github_remote("origin") {
+            Err(GitHubRemoteError::CommandFailed(_)) => (),
             e => panic!("Git command did not fail; got: {:?}", e),
         }
     }
@@ -879,8 +928,9 @@ mod tests {
             return;
         }
         let tmp_path = mkrepo("trunk");
-        match get_local_repo(&Some(tmp_path.path()), "origin") {
-            Err(LocalRepoError::CommandFailed(_)) => (),
+        let lr = LocalRepo::new(tmp_path.path());
+        match lr.github_remote("origin") {
+            Err(GitHubRemoteError::CommandFailed(_)) => (),
             e => panic!("Git command did not fail; got: {:?}", e),
         }
     }
@@ -892,7 +942,8 @@ mod tests {
         }
         let repo = GHRepo::new("octocat", "repository").unwrap();
         let tmp_path = mkrepo_remote("trunk", "origin", &repo.ssh_url());
-        match get_local_repo(&Some(tmp_path.path()), "origin") {
+        let lr = LocalRepo::new(tmp_path.path());
+        match lr.github_remote("origin") {
             Ok(lr) if lr == repo => (),
             e => panic!("Got wrong result: {:?}", e),
         }

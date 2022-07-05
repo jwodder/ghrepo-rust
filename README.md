@@ -8,9 +8,9 @@
 `ghrepo` extracts a GitHub repository's owner & name from various GitHub URL
 formats (or just from a string of the form `OWNER/REPONAME` or `REPONAME`), and
 the resulting object provides properties for going in reverse to determine the
-possible URLs.  Also included is a function for determining the GitHub owner &
-name for a local Git repository, plus a couple of other useful Git repository
-inspection functions.
+possible URLs.  Also included is a struct for performing a couple useful
+inspections on local Git repositories, including determining the corresponding
+GitHub owner & repository name.
 
 Example
 =======
