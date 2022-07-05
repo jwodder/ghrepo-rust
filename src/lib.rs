@@ -1,3 +1,28 @@
+//! Parse GitHub repository URLs & specifiers
+//!
+//! `ghrepo` extracts a GitHub repository's owner & name from various GitHub
+//! URL formats (or just from a string of the form `OWNER/REPONAME` or
+//! `REPONAME`), and the resulting object provides properties for going in
+//! reverse to determine the possible URLs.  Also included is a function for
+//! determining the GitHub owner & name for a local Git repository, plus a
+//! couple of other useful Git repository inspection functions.
+//!
+//! ```
+//! # use std::str::FromStr;
+//! # use ghrepo::GHRepo;
+//! let repo = GHRepo::new("octocat", "repository").unwrap();
+//! assert_eq!(repo.owner(), "octocat");
+//! assert_eq!(repo.name(), "repository");
+//! assert_eq!(repo.to_string(), "octocat/repository");
+//! assert_eq!(repo.html_url(), "https://github.com/octocat/repository");
+//!
+//! let repo2 = GHRepo::from_str("octocat/repository").unwrap();
+//! assert_eq!(repo, repo2);
+//!
+//! let repo3 = GHRepo::from_str("https://github.com/octocat/repository").unwrap();
+//! assert_eq!(repo, repo3);
+//! ```
+
 #[macro_use]
 extern crate lazy_static;
 
@@ -14,23 +39,31 @@ use std::str::{self, FromStr};
 #[cfg(test)]
 use rstest_reuse;
 
-// Regular expression for a valid GitHub username or organization name.  As of
-// 2017-07-23, trying to sign up to GitHub with an invalid username or create
-// an organization with an invalid name gives the message "Username may only
-// contain alphanumeric characters or single hyphens, and cannot begin or end
-// with a hyphen".  Additionally, trying to create a user named "none" (case
-// insensitive) gives the message "Username name 'none' is a reserved word."
-//
-// Unfortunately, there are a number of users who made accounts before the
-// current name restrictions were put in place, and so this regex also needs to
-// accept names that contain underscores, contain multiple consecutive hyphens,
-// begin with a hyphen, and/or end with a hyphen.
+/// Regular expression for a valid GitHub username or organization name.  As of
+/// 2017-07-23, trying to sign up to GitHub with an invalid username or create
+/// an organization with an invalid name gives the message "Username may only
+/// contain alphanumeric characters or single hyphens, and cannot begin or end
+/// with a hyphen".  Additionally, trying to create a user named "none" (case
+/// insensitive) gives the message "Username name 'none' is a reserved word."
+///
+/// Unfortunately, there are a number of users who made accounts before the
+/// current name restrictions were put in place, and so this regex also needs
+/// to accept names that contain underscores, contain multiple consecutive
+/// hyphens, begin with a hyphen, and/or end with a hyphen.
+///
+/// Note that this regex does not check that the owner name is not "none", as
+/// the `regex` crate does not support lookaround; for full validation, use
+/// [`GHRepo::is_valid_owner()`].
 const GH_OWNER_RGX: &str = r"[-_A-Za-z0-9]+";
 
-// Regular expression for a valid GitHub repository name.  Testing as of
-// 2017-05-21 indicates that repository names can be composed of alphanumeric
-// ASCII characters, hyphens, periods, and/or underscores, with the names ``.``
-// and ``..`` being reserved and names ending with ``.git`` forbidden.
+/// Regular expression for a valid GitHub repository name.  Testing as of
+/// 2017-05-21 indicates that repository names can be composed of alphanumeric
+/// ASCII characters, hyphens, periods, and/or underscores, with the names
+/// ``.`` and ``..`` being reserved and names ending with ``.git`` forbidden.
+///
+/// Note that this regex does not check that the name does not end with ".git",
+/// as the `regex` crate does not support lookaround; for full validation, use
+/// [`GHRepo::is_valid_name()`].
 const GH_REPO_RGX: &str = r"(?:\.?[-A-Za-z0-9_][-A-Za-z0-9_.]*?|\.\.[-A-Za-z0-9_.]+?)";
 
 lazy_static! {
@@ -39,6 +72,8 @@ lazy_static! {
     static ref OWNER_NAME: String = format!(r"(?P<owner>{})/(?P<name>{})", GH_OWNER_RGX, GH_REPO_RGX);
 }
 
+/// Error raised when trying to construct a [`GHRepo`] with invalid arguments
+/// or parse an invalid repository spec
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ParseError {
     InvalidSpec(String),
@@ -58,6 +93,20 @@ impl fmt::Display for ParseError {
 
 impl error::Error for ParseError {}
 
+/// A container for a GitHub repository's owner and base name.
+///
+/// A `GHRepo` instance can be constructed in the following ways:
+///
+/// - From an owner and name with [`GHRepo::new()`]
+/// - From a GitHub URL with [`GHRepo::from_url()`]
+/// - From a GitHub URL or a string of the form `{owner}/{name}` with
+///   [`GHRepo::from_str`]
+/// - From a GitHub URL, a string of the form `{owner}/{name}`, or a bare
+///   repository name with the owner defaulting to a given value with
+///   [`GHRepo::from_str_with_owner()`]
+///
+/// Displaying a `GHRepo` instance produces a repository "fullname" of the form
+/// `{owner}/{name}`.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct GHRepo {
     owner: String,
@@ -65,6 +114,7 @@ pub struct GHRepo {
 }
 
 impl GHRepo {
+    /// Construct a [`GHRepo`] with the given owner and repository name
     pub fn new(owner: &str, name: &str) -> Result<Self, ParseError> {
         if !GHRepo::is_valid_owner(owner) {
             Err(ParseError::InvalidOwner(owner.to_string()))
@@ -78,6 +128,21 @@ impl GHRepo {
         }
     }
 
+    /// Test whether a string is a valid GitHub user login or organization
+    /// name.
+    ///
+    /// Note that the restrictions on GitHub usernames have changed over time,
+    /// and this function endeavors to accept all usernames that were valid at
+    /// any point, so just because a name is accepted doesn't necessarily mean
+    /// you can create a user by that name on GitHub today.
+    ///
+    /// ```
+    /// # use ghrepo::GHRepo;
+    /// assert!(GHRepo::is_valid_owner("octocat"));
+    /// assert!(GHRepo::is_valid_owner("octo-cat"));
+    /// assert!(!GHRepo::is_valid_owner("octo.cat"));
+    /// assert!(!GHRepo::is_valid_owner("none"));
+    /// ```
     pub fn is_valid_owner(s: &str) -> bool {
         lazy_static! {
             static ref RGX: Regex = Regex::new(format!("^{GH_OWNER_RGX}$").as_str()).unwrap();
@@ -85,6 +150,15 @@ impl GHRepo {
         RGX.is_match(s) && s.to_ascii_lowercase() != "none"
     }
 
+    /// Test whether a string is a valid repository name.
+    ///
+    /// Note that valid repository names do not include the ".git" suffix.
+    ///
+    /// ```
+    /// # use ghrepo::GHRepo;
+    /// assert!(GHRepo::is_valid_name("my-repo"));
+    /// assert!(!GHRepo::is_valid_name("my-repo.git"));
+    /// ```
     pub fn is_valid_name(s: &str) -> bool {
         lazy_static! {
             static ref RGX: Regex = Regex::new(format!("^{GH_REPO_RGX}$").as_str()).unwrap();
@@ -92,6 +166,19 @@ impl GHRepo {
         RGX.is_match(s) && !s.to_ascii_lowercase().ends_with(".git")
     }
 
+    /// Like [`GHRepo::from_str()`], except that if `s` is just a repository
+    /// name without an owner, the owner will be set to `owner`
+    ///
+    /// ```
+    /// # use ghrepo::GHRepo;
+    /// let repo = GHRepo::from_str_with_owner("octocat/repository", "foobar").unwrap();
+    /// assert_eq!(repo.owner(), "octocat");
+    /// assert_eq!(repo.name(), "repository");
+    ///
+    /// let repo = GHRepo::from_str_with_owner("repository", "foobar").unwrap();
+    /// assert_eq!(repo.owner(), "foobar");
+    /// assert_eq!(repo.name(), "repository");
+    /// ```
     pub fn from_str_with_owner(s: &str, owner: &str) -> Result<Self, ParseError> {
         if GHRepo::is_valid_name(s) {
             GHRepo::new(owner, s)
@@ -100,34 +187,50 @@ impl GHRepo {
         }
     }
 
+    /// Retrieve the repository's owner's name
     pub fn owner(&self) -> &str {
         &self.owner
     }
 
+    /// Retrieve the repository's base name
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// Returns the base URL for accessing the repository via the GitHub REST
+    /// API; this is a string of the form
+    /// `https://api.github.com/repos/{owner}/{name}`.
     pub fn api_url(&self) -> String {
         format!("https://api.github.com/repos/{}/{}", self.owner, self.name)
     }
 
+    /// Returns the URL for cloning the repository over HTTPS
     pub fn clone_url(&self) -> String {
         format!("https://github.com/{}/{}.git", self.owner, self.name)
     }
 
+    /// Returns the URL for cloning the repository via the native Git protocol
     pub fn git_url(&self) -> String {
         format!("git://github.com/{}/{}.git", self.owner, self.name)
     }
 
+    /// Returns the URL for the repository's web interface
     pub fn html_url(&self) -> String {
         format!("https://github.com/{}/{}", self.owner, self.name)
     }
 
+    /// Returns the URL for cloning the repository over SSH
     pub fn ssh_url(&self) -> String {
         format!("git@github.com:{}/{}.git", self.owner, self.name)
     }
 
+    /// Parse a GitHub repository URL.  The following URL formats are
+    /// recognized:
+    ///
+    /// - `[https://[<username>[:<password>]@]][www.]github.com/<owner>/<name>[.git][/]`
+    /// - `[https://]api.github.com/repos/<owner>/<name>`
+    /// - `git://github.com/<owner>/<name>[.git]`
+    /// - `[ssh://]git@github.com:<owner>/<name>[.git]`
     pub fn from_url(s: &str) -> Result<Self, ParseError> {
         lazy_static! {
             static ref GITHUB_URL_CREGEXEN: [Regex; 4] = [
@@ -170,6 +273,9 @@ impl fmt::Display for GHRepo {
 impl FromStr for GHRepo {
     type Err = ParseError;
 
+    /// Parse a GitHub repository specified.  This can be either a URL (as
+    /// accepted by [`GHRepo::from_url()`]) or a string in the form
+    /// `{owner}/{name}`.
     fn from_str(s: &str) -> Result<Self, ParseError> {
         lazy_static! {
             static ref RGX: Regex = Regex::new(format!("^{}$", *OWNER_NAME).as_str()).unwrap();
@@ -184,6 +290,8 @@ impl FromStr for GHRepo {
     }
 }
 
+/// Tests whether the given directory (default: the current directory) is
+/// either a Git repository or contained in one
 pub fn is_git_repo<P: AsRef<Path>>(dirpath: Option<P>) -> Result<bool, io::Error> {
     let mut cmd = Command::new("git");
     cmd.args(["rev-parse", "--git-dir"])
@@ -195,10 +303,14 @@ pub fn is_git_repo<P: AsRef<Path>>(dirpath: Option<P>) -> Result<bool, io::Error
     return Ok(cmd.status()?.success());
 }
 
+/// Error raised when [`get_current_branch()`] fails
 #[derive(Debug)]
 pub enum CurrentBranchError {
+    /// Raised when the Git command could not be executed
     CouldNotExecute(io::Error),
+    /// Raised when the Git command returned nonzero
     CommandFailed(ExitStatus),
+    /// Raised when the output from Git could not be decoded
     InvalidUtf8(str::Utf8Error),
 }
 
@@ -241,6 +353,8 @@ impl From<str::Utf8Error> for CurrentBranchError {
     }
 }
 
+/// Get the current branch for the Git repository located at or containing the
+/// directory `dirpath` (default: the current directory)
 pub fn get_current_branch<P: AsRef<Path>>(
     dirpath: Option<P>,
 ) -> Result<String, CurrentBranchError> {
@@ -257,12 +371,17 @@ pub fn get_current_branch<P: AsRef<Path>>(
     }
 }
 
+/// Error raised when [`get_local_repo()`] fails
 #[derive(Debug)]
 pub enum LocalRepoError {
+    /// Raised when the Git command could not be executed
     CouldNotExecute(io::Error),
+    /// Raised when the Git command returned nonzero
     CommandFailed(ExitStatus),
+    /// Raised when the output from Git could not be decoded
     InvalidUtf8(str::Utf8Error),
-    InvalidRemote(ParseError),
+    /// Raised when the remote URL is not a GitHub URL
+    InvalidRemoteURL(ParseError),
 }
 
 impl fmt::Display for LocalRepoError {
@@ -278,7 +397,7 @@ impl fmt::Display for LocalRepoError {
             LocalRepoError::InvalidUtf8(e) => {
                 write!(f, "Failed to decode output from Git command: {}", e)
             }
-            LocalRepoError::InvalidRemote(e) => {
+            LocalRepoError::InvalidRemoteURL(e) => {
                 write!(f, "Repository remote URL is not a GitHub URL: {}", e)
             }
         }
@@ -291,7 +410,7 @@ impl error::Error for LocalRepoError {
             LocalRepoError::CouldNotExecute(e) => Some(e),
             LocalRepoError::CommandFailed(_) => None,
             LocalRepoError::InvalidUtf8(e) => Some(e),
-            LocalRepoError::InvalidRemote(e) => Some(e),
+            LocalRepoError::InvalidRemoteURL(e) => Some(e),
         }
     }
 }
@@ -310,10 +429,13 @@ impl From<str::Utf8Error> for LocalRepoError {
 
 impl From<ParseError> for LocalRepoError {
     fn from(e: ParseError) -> LocalRepoError {
-        LocalRepoError::InvalidRemote(e)
+        LocalRepoError::InvalidRemoteURL(e)
     }
 }
 
+/// Determine the GitHub repository for the Git repository located at or
+/// containing the directory `dirpath` (default: the current directory) by
+/// parsing the URL for the specified remote
 pub fn get_local_repo<P: AsRef<Path>>(
     dirpath: Option<P>,
     remote: &str,
@@ -334,6 +456,7 @@ pub fn get_local_repo<P: AsRef<Path>>(
 /// Show current GitHub repository
 #[derive(Debug, Parser)]
 #[clap(version)]
+#[doc(hidden)]
 pub struct Arguments {
     /// Output JSON
     #[clap(short = 'J', long)]
@@ -347,6 +470,8 @@ pub struct Arguments {
     pub dirpath: Option<String>,
 }
 
+#[doc(hidden)]
+/// The implementation of the command-line interface
 pub fn run(args: Arguments) -> Result<String, LocalRepoError> {
     let r = get_local_repo(args.dirpath, &args.remote)?;
     if args.json {
