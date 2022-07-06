@@ -83,8 +83,19 @@ lazy_static! {
 /// or parse an invalid repository spec
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ParseError {
+    /// Returned by [`GHRepo::from_str`], [`GHRepo::from_url`], or
+    /// [`GHRepo::from_str_with_owner`] if given a string that is not a valid
+    /// GitHub repository URL or specifier; the field is the string in
+    /// question.
     InvalidSpec(String),
+
+    /// Returned by [`GHRepo::new`] or [`GHRepo::from_str_with_owner`] if given
+    /// an invalid GitHub repository owner name; the field is the owner name in
+    /// question.
     InvalidOwner(String),
+
+    /// Returned by [`GHRepo::new`] if given an invalid GitHub repository name;
+    /// the field is the name in question.
     InvalidName(String),
 }
 
@@ -468,7 +479,7 @@ pub enum LocalRepoError {
     DetachedHead,
 
     /// Returned by [`LocalRepo::github_remote()`] if the named remote does not
-    /// exist.  The argument is the name of the nonexistent remote.
+    /// exist.  The field is the name of the nonexistent remote.
     NoSuchRemote(String),
 
     /// Returned when the output from Git could not be decoded
