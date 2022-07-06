@@ -1,6 +1,6 @@
 #![warn(warnings)]
 
-//! Parse GitHub repository URLs & specifiers
+//! Parse & construct GitHub repository URLs & specifiers
 //!
 //! `ghrepo` extracts a GitHub repository's owner & name from various GitHub
 //! URL formats (or just from a string of the form `OWNER/REPONAME` or

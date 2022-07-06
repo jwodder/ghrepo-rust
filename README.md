@@ -3,7 +3,7 @@
 [![codecov.io](https://codecov.io/gh/jwodder/ghrepo-rust/branch/master/graph/badge.svg)](https://codecov.io/gh/jwodder/ghrepo-rust)
 [![MIT License](https://img.shields.io/github/license/jwodder/ghrepo.svg)](https://opensource.org/licenses/MIT)
 
-[GitHub](https://github.com/jwodder/ghrepo-rust) <!-- | [crates.io](https://crates.io/crates/ghrepo) --> <!-- | [Documentation](docs.rs/ghrepo) --> | [Issues](https://github.com/jwodder/ghrepo-rust/issues) <!-- | [Changelog](https://github.com/jwodder/ghrepo-rust/blob/master/CHANGELOG.md) -->
+[GitHub](https://github.com/jwodder/ghrepo-rust) <!-- | [crates.io](https://crates.io/crates/ghrepo) --> <!-- | [Documentation](https://docs.rs/ghrepo) --> | [Issues](https://github.com/jwodder/ghrepo-rust/issues) <!-- | [Changelog](https://github.com/jwodder/ghrepo-rust/blob/master/CHANGELOG.md) -->
 
 `ghrepo` extracts a GitHub repository's owner & name from various GitHub URL
 formats (or just from a string of the form `OWNER/REPONAME` or `REPONAME`), and
