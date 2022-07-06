@@ -588,6 +588,7 @@ mod tests {
     use super::*;
     use rstest::rstest;
     use rstest_reuse::{apply, template};
+    use std::io::{Error, ErrorKind};
     use std::str::FromStr;
     use tempfile::{tempdir, TempDir};
     use which::which;
@@ -884,7 +885,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_current_branch_empty() {
+    fn test_current_branch_empty() {
         if which("git").is_err() {
             return;
         }
@@ -897,7 +898,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_current_branch() {
+    fn test_current_branch() {
         if which("git").is_err() {
             return;
         }
@@ -910,20 +911,22 @@ mod tests {
     }
 
     #[test]
-    fn test_get_local_repo_empty() {
+    fn test_github_remote_empty() {
         if which("git").is_err() {
             return;
         }
         let tmp_path = tempdir().unwrap();
         let lr = LocalRepo::new(tmp_path.path());
         match lr.github_remote("origin") {
-            Err(GitHubRemoteError::CommandFailed(_)) => (),
+            Err(e @ GitHubRemoteError::CommandFailed(_)) => {
+                assert_eq!(e.to_string(), "Git command exited with return code 128")
+            }
             e => panic!("Git command did not fail; got: {:?}", e),
         }
     }
 
     #[test]
-    fn test_get_local_repo_no_remote() {
+    fn test_github_remote_no_remote() {
         if which("git").is_err() {
             return;
         }
@@ -936,7 +939,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_local_repo() {
+    fn test_github_remote() {
         if which("git").is_err() {
             return;
         }
@@ -993,5 +996,56 @@ mod tests {
             Ok(s) if s == expected => (),
             e => panic!("Got wrong result: {:?}", e),
         }
+    }
+
+    #[test]
+    fn test_display_parse_error_invalid_spec() {
+        let e = ParseError::InvalidSpec("foo.bar".to_string());
+        assert_eq!(e.to_string(), "Invalid GitHub repository spec: \"foo.bar\"");
+    }
+
+    #[test]
+    fn test_display_parse_error_invalid_owner() {
+        let e = ParseError::InvalidOwner("foo.bar".to_string());
+        assert_eq!(
+            e.to_string(),
+            "Invalid GitHub repository owner: \"foo.bar\""
+        );
+    }
+
+    #[test]
+    fn test_display_parse_error_invalid_name() {
+        let e = ParseError::InvalidName("foo.git".to_string());
+        assert_eq!(e.to_string(), "Invalid GitHub repository name: \"foo.git\"");
+    }
+
+    #[test]
+    fn test_display_current_branch_error_could_not_execute() {
+        let e = CurrentBranchError::CouldNotExecute(Error::from(ErrorKind::NotFound));
+        assert_eq!(
+            e.to_string(),
+            format!(
+                "Failed to execute Git command: {}",
+                Error::from(ErrorKind::NotFound)
+            )
+        );
+    }
+
+    #[test]
+    fn test_display_github_remote_error_could_not_execute() {
+        let e = GitHubRemoteError::CouldNotExecute(Error::from(ErrorKind::NotFound));
+        assert_eq!(
+            e.to_string(),
+            format!(
+                "Failed to execute Git command: {}",
+                Error::from(ErrorKind::NotFound)
+            )
+        );
+    }
+
+    #[test]
+    fn test_display_github_remote_error_parse_error() {
+        let e = GitHubRemoteError::InvalidRemoteURL(ParseError::InvalidSpec("foo.bar".to_string()));
+        assert_eq!(e.to_string(), "Repository remote URL is not a GitHub URL: Invalid GitHub repository spec: \"foo.bar\"");
     }
 }
