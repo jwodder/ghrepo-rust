@@ -463,6 +463,30 @@ impl LocalRepo {
             Err(e) => Err(e),
         }
     }
+
+    /// Determines the GitHub repository for the upstream remote of the given
+    /// branch of the local repository
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`LocalRepoError`] if the invoked Git commit fails to execute
+    /// or returns a nonzero status, if the command's output is invalid UTF-8,
+    /// if the branch does not have a remote configured, if the remote
+    /// does not exist, or if the URL for the remote is not a valid GitHub URL
+    pub fn branch_upstream(&self, branch: &str) -> Result<GHRepo, LocalRepoError> {
+        match self.read(&[
+            "config",
+            "--get",
+            "--",
+            format!("branch.{branch}.remote").as_str(),
+        ]) {
+            Ok(upstream) => self.github_remote(&upstream),
+            Err(LocalRepoError::CommandFailed(r)) if r.code() == Some(1) => {
+                Err(LocalRepoError::NoUpstream(branch.to_string()))
+            }
+            Err(e) => Err(e),
+        }
+    }
 }
 
 /// Error returned when a [`LocalRepo`] method fails
@@ -481,6 +505,12 @@ pub enum LocalRepoError {
     /// Returned by [`LocalRepo::github_remote()`] if the named remote does not
     /// exist.  The field is the name of the nonexistent remote.
     NoSuchRemote(String),
+
+    /// Returned by [`LocalRepo::branch_upstream()`] if the given branch does
+    /// not have an upstream remote configured.  (This includes the situation
+    /// in which the branch does not exist.)  The field is the name of the
+    /// queried branch.
+    NoUpstream(String),
 
     /// Returned when the output from Git could not be decoded
     InvalidUtf8(str::Utf8Error),
@@ -505,6 +535,13 @@ impl fmt::Display for LocalRepoError {
             LocalRepoError::NoSuchRemote(remote) => {
                 write!(f, "No such remote in Git repository: {}", remote)
             }
+            LocalRepoError::NoUpstream(branch) => {
+                write!(
+                    f,
+                    "No upstream remote configured for Git branch: {}",
+                    branch
+                )
+            }
             LocalRepoError::InvalidUtf8(e) => {
                 write!(f, "Failed to decode output from Git command: {}", e)
             }
@@ -522,6 +559,7 @@ impl error::Error for LocalRepoError {
             LocalRepoError::CommandFailed(_) => None,
             LocalRepoError::DetachedHead => None,
             LocalRepoError::NoSuchRemote(_) => None,
+            LocalRepoError::NoUpstream(_) => None,
             LocalRepoError::InvalidUtf8(e) => Some(e),
             LocalRepoError::InvalidRemoteURL(e) => Some(e),
         }
@@ -642,6 +680,10 @@ mod tests {
                 remote.as_ref(),
                 url.as_ref(),
             ])
+        }
+
+        fn set_upstream(&self, branch: &str, remote: &str) {
+            self.run(&["config", format!("branch.{branch}.remote").as_str(), remote])
         }
 
         fn detach(&self) {
@@ -1051,6 +1093,37 @@ mod tests {
     }
 
     #[test]
+    fn test_branch_upstream_no_upstream() {
+        if which("git").is_err() {
+            return;
+        }
+        let maker = RepoMaker::new();
+        maker.init("trunk");
+        let lr = LocalRepo::new(maker.path());
+        match lr.branch_upstream("trunk") {
+            Err(LocalRepoError::NoUpstream(branch)) if branch == "trunk" => (),
+            e => panic!("Got wrong result: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn test_branch_upstream() {
+        if which("git").is_err() {
+            return;
+        }
+        let repo = GHRepo::new("octocat", "repository").unwrap();
+        let maker = RepoMaker::new();
+        maker.init("trunk");
+        maker.add_remote("github", &repo.clone_url());
+        maker.set_upstream("trunk", "github");
+        let lr = LocalRepo::new(maker.path());
+        match lr.branch_upstream("trunk") {
+            Ok(r) if r == repo => (),
+            e => panic!("Got wrong result: {:?}", e),
+        }
+    }
+
+    #[test]
     fn test_run() {
         if which("git").is_err() {
             return;
@@ -1137,6 +1210,21 @@ mod tests {
     fn test_display_local_repo_error_detached_head() {
         let e = LocalRepoError::DetachedHead;
         assert_eq!(e.to_string(), "Git repository is in a detached HEAD state");
+    }
+
+    #[test]
+    fn test_display_local_repo_error_no_such_remote() {
+        let e = LocalRepoError::NoSuchRemote("origin".to_string());
+        assert_eq!(e.to_string(), "No such remote in Git repository: origin");
+    }
+
+    #[test]
+    fn test_display_local_repo_error_no_upstream() {
+        let e = LocalRepoError::NoUpstream("main".to_string());
+        assert_eq!(
+            e.to_string(),
+            "No upstream remote configured for Git branch: main"
+        );
     }
 
     #[test]
