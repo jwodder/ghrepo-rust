@@ -274,7 +274,9 @@ impl GHRepo {
                     *OWNER_NAME
                 ).as_str())
                 .unwrap(),
-                Regex::new(format!(r"^git://github\.com/{}(?:\.git)?$", *OWNER_NAME).as_str()).unwrap(),
+                Regex::new(
+                    format!(r"^git://github\.com/{}(?:\.git)?$", *OWNER_NAME).as_str()
+                ).unwrap(),
                 Regex::new(format!(
                     r"^(?:ssh://)?git@github\.com:{}(?:\.git)?$",
                     *OWNER_NAME
@@ -284,10 +286,17 @@ impl GHRepo {
         }
         for crgx in &*GITHUB_URL_CREGEXEN {
             if let Some(caps) = crgx.captures(s) {
-                return GHRepo::new(
+                return match GHRepo::new(
                     caps.name("owner").unwrap().as_str(),
                     caps.name("name").unwrap().as_str(),
-                );
+                ) {
+                    r @ Ok(_) => r,
+                    // If the string matched a URL regex but had a bad owner or
+                    // name (e.g., an owner of "none"), ensure the returned
+                    // error reports the full string rather than just the bad
+                    // segment
+                    Err(_) => Err(ParseError::InvalidSpec(s.to_string())),
+                };
             }
         }
         Err(ParseError::InvalidSpec(s.to_string()))
@@ -316,10 +325,16 @@ impl FromStr for GHRepo {
             static ref RGX: Regex = Regex::new(format!("^{}$", *OWNER_NAME).as_str()).unwrap();
         }
         if let Some(caps) = RGX.captures(s) {
-            return GHRepo::new(
+            return match GHRepo::new(
                 caps.name("owner").unwrap().as_str(),
                 caps.name("name").unwrap().as_str(),
-            );
+            ) {
+                r @ Ok(_) => r,
+                // If the string has a bad owner or name (e.g., an owner of
+                // "none"), ensure the returned error reports the full string
+                // rather than just the bad segment
+                Err(_) => Err(ParseError::InvalidSpec(s.to_string())),
+            };
         }
         GHRepo::from_url(s)
     }
@@ -797,7 +812,10 @@ mod tests {
 
     #[apply(bad_repos)]
     fn test_from_bad_str(#[case] spec: &str) {
-        assert!(GHRepo::from_str(spec).is_err());
+        match GHRepo::from_str(spec) {
+            Err(ParseError::InvalidSpec(s)) if s == spec => (),
+            e => panic!("Got wrong result: {:?}", e),
+        }
     }
 
     #[apply(repo_urls)]
@@ -808,7 +826,10 @@ mod tests {
 
     #[apply(bad_repos)]
     fn test_from_bad_url(#[case] url: &str) {
-        assert!(GHRepo::from_url(url).is_err());
+        match GHRepo::from_url(url) {
+            Err(ParseError::InvalidSpec(s)) if s == url => (),
+            e => panic!("Got wrong result: {:?}", e),
+        }
     }
 
     #[rstest]
