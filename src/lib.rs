@@ -378,8 +378,8 @@ impl LocalRepo {
     ///
     /// # Errors
     ///
-    /// Returns a [`std::io::Error`] if the invoked Git commit fails to execute
-    pub fn is_git_repo(&self) -> Result<bool, io::Error> {
+    /// Returns a [`LocalRepoError`] if the invoked Git commit fails to execute
+    pub fn is_git_repo(&self) -> Result<bool, LocalRepoError> {
         Ok(Command::new("git")
             .args(["rev-parse", "--git-dir"])
             .stdout(Stdio::null())
@@ -393,10 +393,10 @@ impl LocalRepo {
     ///
     /// # Errors
     ///
-    /// Returns a [`CurrentBranchError`] if the invoked Git commit fails to
-    /// execute or returns a nonzero status, or if the command's output is
-    /// invalid UTF-8
-    pub fn current_branch(&self) -> Result<String, CurrentBranchError> {
+    /// Returns a [`LocalRepoError`] if the invoked Git commit fails to execute
+    /// or returns a nonzero status, or if the command's output is invalid
+    /// UTF-8
+    pub fn current_branch(&self) -> Result<String, LocalRepoError> {
         let out = Command::new("git")
             .args(["symbolic-ref", "--short", "-q", "HEAD"])
             .current_dir(&self.path)
@@ -404,7 +404,7 @@ impl LocalRepo {
         if out.status.success() {
             Ok(str::from_utf8(&out.stdout)?.trim().to_string())
         } else {
-            Err(CurrentBranchError::CommandFailed(out.status))
+            Err(LocalRepoError::CommandFailed(out.status))
         }
     }
 
@@ -413,10 +413,10 @@ impl LocalRepo {
     ///
     /// # Errors
     ///
-    /// Returns a [`GitHubRemoteError`] if the invoked Git commit fails to
-    /// execute or returns a nonzero status, if the command's output is invalid
-    /// UTF-8, or if the URL for the given remote is not a valid GitHub URL
-    pub fn github_remote(&self, remote: &str) -> Result<GHRepo, GitHubRemoteError> {
+    /// Returns a [`LocalRepoError`] if the invoked Git commit fails to execute
+    /// or returns a nonzero status, if the command's output is invalid UTF-8,
+    /// or if the URL for the given remote is not a valid GitHub URL
+    pub fn github_remote(&self, remote: &str) -> Result<GHRepo, LocalRepoError> {
         let out = Command::new("git")
             .args(["remote", "get-url", "--", remote])
             .current_dir(&self.path)
@@ -424,64 +424,14 @@ impl LocalRepo {
         if out.status.success() {
             Ok(GHRepo::from_url(str::from_utf8(&out.stdout)?.trim())?)
         } else {
-            Err(GitHubRemoteError::CommandFailed(out.status))
+            Err(LocalRepoError::CommandFailed(out.status))
         }
     }
 }
 
-/// Error returned when [`LocalRepo::current_branch()`] fails
+/// Error returned when a [`LocalRepo`] method fails
 #[derive(Debug)]
-pub enum CurrentBranchError {
-    /// Returned when the Git command could not be executed
-    CouldNotExecute(io::Error),
-    /// Returned when the Git command returned nonzero
-    CommandFailed(ExitStatus),
-    /// Returned when the output from Git could not be decoded
-    InvalidUtf8(str::Utf8Error),
-}
-
-impl fmt::Display for CurrentBranchError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            CurrentBranchError::CouldNotExecute(e) => {
-                write!(f, "Failed to execute Git command: {}", e)
-            }
-            CurrentBranchError::CommandFailed(r) => match r.code() {
-                Some(rc) => write!(f, "Git command exited with return code {}", rc),
-                None => write!(f, "Git command was killed by a signal"),
-            },
-            CurrentBranchError::InvalidUtf8(e) => {
-                write!(f, "Failed to decode output from Git command: {}", e)
-            }
-        }
-    }
-}
-
-impl error::Error for CurrentBranchError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match self {
-            CurrentBranchError::CouldNotExecute(e) => Some(e),
-            CurrentBranchError::CommandFailed(_) => None,
-            CurrentBranchError::InvalidUtf8(e) => Some(e),
-        }
-    }
-}
-
-impl From<io::Error> for CurrentBranchError {
-    fn from(e: io::Error) -> CurrentBranchError {
-        CurrentBranchError::CouldNotExecute(e)
-    }
-}
-
-impl From<str::Utf8Error> for CurrentBranchError {
-    fn from(e: str::Utf8Error) -> CurrentBranchError {
-        CurrentBranchError::InvalidUtf8(e)
-    }
-}
-
-/// Error returned when [`LocalRepo::github_remote()`] fails
-#[derive(Debug)]
-pub enum GitHubRemoteError {
+pub enum LocalRepoError {
     /// Returned when the Git command could not be executed
     CouldNotExecute(io::Error),
     /// Returned when the Git command returned nonzero
@@ -492,52 +442,52 @@ pub enum GitHubRemoteError {
     InvalidRemoteURL(ParseError),
 }
 
-impl fmt::Display for GitHubRemoteError {
+impl fmt::Display for LocalRepoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            GitHubRemoteError::CouldNotExecute(e) => {
+            LocalRepoError::CouldNotExecute(e) => {
                 write!(f, "Failed to execute Git command: {}", e)
             }
-            GitHubRemoteError::CommandFailed(r) => match r.code() {
+            LocalRepoError::CommandFailed(r) => match r.code() {
                 Some(rc) => write!(f, "Git command exited with return code {}", rc),
                 None => write!(f, "Git command was killed by a signal"),
             },
-            GitHubRemoteError::InvalidUtf8(e) => {
+            LocalRepoError::InvalidUtf8(e) => {
                 write!(f, "Failed to decode output from Git command: {}", e)
             }
-            GitHubRemoteError::InvalidRemoteURL(e) => {
+            LocalRepoError::InvalidRemoteURL(e) => {
                 write!(f, "Repository remote URL is not a GitHub URL: {}", e)
             }
         }
     }
 }
 
-impl error::Error for GitHubRemoteError {
+impl error::Error for LocalRepoError {
     fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match self {
-            GitHubRemoteError::CouldNotExecute(e) => Some(e),
-            GitHubRemoteError::CommandFailed(_) => None,
-            GitHubRemoteError::InvalidUtf8(e) => Some(e),
-            GitHubRemoteError::InvalidRemoteURL(e) => Some(e),
+            LocalRepoError::CouldNotExecute(e) => Some(e),
+            LocalRepoError::CommandFailed(_) => None,
+            LocalRepoError::InvalidUtf8(e) => Some(e),
+            LocalRepoError::InvalidRemoteURL(e) => Some(e),
         }
     }
 }
 
-impl From<io::Error> for GitHubRemoteError {
-    fn from(e: io::Error) -> GitHubRemoteError {
-        GitHubRemoteError::CouldNotExecute(e)
+impl From<io::Error> for LocalRepoError {
+    fn from(e: io::Error) -> LocalRepoError {
+        LocalRepoError::CouldNotExecute(e)
     }
 }
 
-impl From<str::Utf8Error> for GitHubRemoteError {
-    fn from(e: str::Utf8Error) -> GitHubRemoteError {
-        GitHubRemoteError::InvalidUtf8(e)
+impl From<str::Utf8Error> for LocalRepoError {
+    fn from(e: str::Utf8Error) -> LocalRepoError {
+        LocalRepoError::InvalidUtf8(e)
     }
 }
 
-impl From<ParseError> for GitHubRemoteError {
-    fn from(e: ParseError) -> GitHubRemoteError {
-        GitHubRemoteError::InvalidRemoteURL(e)
+impl From<ParseError> for LocalRepoError {
+    fn from(e: ParseError) -> LocalRepoError {
+        LocalRepoError::InvalidRemoteURL(e)
     }
 }
 
@@ -560,7 +510,7 @@ pub struct Arguments {
 
 #[doc(hidden)]
 /// The implementation of the command-line interface
-pub fn run(args: &Arguments) -> Result<String, GitHubRemoteError> {
+pub fn run(args: &Arguments) -> Result<String, LocalRepoError> {
     let lr = match &args.dirpath {
         Some(p) => LocalRepo::new(&p),
         None => LocalRepo::for_cwd()?,
@@ -892,7 +842,7 @@ mod tests {
         let tmp_path = tempdir().unwrap();
         let lr = LocalRepo::new(tmp_path.path());
         match lr.current_branch() {
-            Err(CurrentBranchError::CommandFailed(_)) => (),
+            Err(LocalRepoError::CommandFailed(_)) => (),
             e => panic!("Git command did not fail; got: {:?}", e),
         }
     }
@@ -918,7 +868,7 @@ mod tests {
         let tmp_path = tempdir().unwrap();
         let lr = LocalRepo::new(tmp_path.path());
         match lr.github_remote("origin") {
-            Err(e @ GitHubRemoteError::CommandFailed(_)) => {
+            Err(e @ LocalRepoError::CommandFailed(_)) => {
                 assert_eq!(e.to_string(), "Git command exited with return code 128")
             }
             e => panic!("Git command did not fail; got: {:?}", e),
@@ -933,7 +883,7 @@ mod tests {
         let tmp_path = mkrepo("trunk");
         let lr = LocalRepo::new(tmp_path.path());
         match lr.github_remote("origin") {
-            Err(GitHubRemoteError::CommandFailed(_)) => (),
+            Err(LocalRepoError::CommandFailed(_)) => (),
             e => panic!("Git command did not fail; got: {:?}", e),
         }
     }
@@ -1020,8 +970,8 @@ mod tests {
     }
 
     #[test]
-    fn test_display_current_branch_error_could_not_execute() {
-        let e = CurrentBranchError::CouldNotExecute(Error::from(ErrorKind::NotFound));
+    fn test_display_local_repo_error_could_not_execute() {
+        let e = LocalRepoError::CouldNotExecute(Error::from(ErrorKind::NotFound));
         assert_eq!(
             e.to_string(),
             format!(
@@ -1032,20 +982,8 @@ mod tests {
     }
 
     #[test]
-    fn test_display_github_remote_error_could_not_execute() {
-        let e = GitHubRemoteError::CouldNotExecute(Error::from(ErrorKind::NotFound));
-        assert_eq!(
-            e.to_string(),
-            format!(
-                "Failed to execute Git command: {}",
-                Error::from(ErrorKind::NotFound)
-            )
-        );
-    }
-
-    #[test]
-    fn test_display_github_remote_error_parse_error() {
-        let e = GitHubRemoteError::InvalidRemoteURL(ParseError::InvalidSpec("foo.bar".to_string()));
+    fn test_display_local_repo_error_parse_error() {
+        let e = LocalRepoError::InvalidRemoteURL(ParseError::InvalidSpec("foo.bar".to_string()));
         assert_eq!(e.to_string(), "Repository remote URL is not a GitHub URL: Invalid GitHub repository spec: \"foo.bar\"");
     }
 }
