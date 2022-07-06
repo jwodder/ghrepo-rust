@@ -423,10 +423,15 @@ impl LocalRepo {
     /// # Errors
     ///
     /// Returns a [`LocalRepoError`] if the invoked Git commit fails to execute
-    /// or returns a nonzero status, or if the command's output is invalid
-    /// UTF-8
+    /// or returns a nonzero status, if the command's output is invalid UTF-8,
+    /// or if the repository is in a detached `HEAD` state
     pub fn current_branch(&self) -> Result<String, LocalRepoError> {
-        self.read(&["symbolic-ref", "--short", "-q", "HEAD"])
+        match self.read(&["symbolic-ref", "--short", "-q", "HEAD"]) {
+            Err(LocalRepoError::CommandFailed(rc)) if rc.code() == Some(1) => {
+                Err(LocalRepoError::DetachedHead)
+            }
+            r => r,
+        }
     }
 
     /// Determines the GitHub repository that the local repository is a clone
@@ -448,10 +453,17 @@ impl LocalRepo {
 pub enum LocalRepoError {
     /// Returned when the Git command could not be executed
     CouldNotExecute(io::Error),
+
     /// Returned when the Git command returned nonzero
     CommandFailed(ExitStatus),
+
+    /// Returned by [`LocalRepo::current_branch()`] if the repository is in a
+    /// detached `HEAD` state
+    DetachedHead,
+
     /// Returned when the output from Git could not be decoded
     InvalidUtf8(str::Utf8Error),
+
     /// Returned when the remote URL is not a GitHub URL
     InvalidRemoteURL(ParseError),
 }
@@ -466,6 +478,9 @@ impl fmt::Display for LocalRepoError {
                 Some(rc) => write!(f, "Git command exited with return code {}", rc),
                 None => write!(f, "Git command was killed by a signal"),
             },
+            LocalRepoError::DetachedHead => {
+                write!(f, "Git repository is in a detached HEAD state")
+            }
             LocalRepoError::InvalidUtf8(e) => {
                 write!(f, "Failed to decode output from Git command: {}", e)
             }
@@ -481,6 +496,7 @@ impl error::Error for LocalRepoError {
         match self {
             LocalRepoError::CouldNotExecute(e) => Some(e),
             LocalRepoError::CommandFailed(_) => None,
+            LocalRepoError::DetachedHead => None,
             LocalRepoError::InvalidUtf8(e) => Some(e),
             LocalRepoError::InvalidRemoteURL(e) => Some(e),
         }
@@ -553,6 +569,7 @@ mod tests {
     use rstest::rstest;
     use rstest_reuse::{apply, template};
     use std::ffi::OsStr;
+    use std::fs;
     use std::io::{Error, ErrorKind};
     use std::str::FromStr;
     use tempfile::{tempdir, TempDir};
@@ -576,29 +593,40 @@ mod tests {
             self.tmpdir.path()
         }
 
-        fn init(&self, branch: &str) {
+        fn run<S: AsRef<OsStr>>(&self, args: &[S]) {
             let r = Command::new("git")
-                .arg("-c")
-                .arg(format!("init.defaultBranch={branch}"))
-                .arg("init")
+                .args(args)
                 .current_dir(self.path())
                 .status()
                 .unwrap();
             assert!(r.success());
         }
 
+        fn init(&self, branch: &str) {
+            self.run(&[
+                "-c",
+                format!("init.defaultBranch={branch}").as_str(),
+                "init",
+            ])
+        }
+
         fn add_remote<S: AsRef<OsStr>>(&self, remote: &str, url: S) {
-            let r = Command::new("git")
-                .args([
-                    OsStr::new("remote"),
-                    OsStr::new("add"),
-                    remote.as_ref(),
-                    url.as_ref(),
-                ])
-                .current_dir(self.path())
-                .status()
-                .unwrap();
-            assert!(r.success());
+            self.run(&[
+                "remote".as_ref(),
+                "add".as_ref(),
+                remote.as_ref(),
+                url.as_ref(),
+            ])
+        }
+
+        fn detach(&self) {
+            fs::write(self.path().join("file.txt"), b"This is test text\n").unwrap();
+            self.run(&["add", "file.txt"]);
+            self.run(&["commit", "-m", "Add a file"]);
+            fs::write(self.path().join("file2.txt"), b"This is also text\n").unwrap();
+            self.run(&["add", "file2.txt"]);
+            self.run(&["commit", "-m", "Add another file"]);
+            self.run(&["checkout", "HEAD^"]);
         }
     }
 
@@ -904,6 +932,21 @@ mod tests {
     }
 
     #[test]
+    fn test_current_branch_detached() {
+        if which("git").is_err() {
+            return;
+        }
+        let maker = RepoMaker::new();
+        maker.init("trunk");
+        maker.detach();
+        let lr = LocalRepo::new(maker.path());
+        match lr.current_branch() {
+            Err(LocalRepoError::DetachedHead) => (),
+            e => panic!("Got wrong result: {:?}", e),
+        }
+    }
+
+    #[test]
     fn test_github_remote_empty() {
         if which("git").is_err() {
             return;
@@ -1063,6 +1106,12 @@ mod tests {
                 Error::from(ErrorKind::NotFound)
             )
         );
+    }
+
+    #[test]
+    fn test_display_local_repo_error_detached_head() {
+        let e = LocalRepoError::DetachedHead;
+        assert_eq!(e.to_string(), "Git repository is in a detached HEAD state");
     }
 
     #[test]
