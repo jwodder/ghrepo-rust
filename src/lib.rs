@@ -537,10 +537,14 @@ mod tests {
     use super::*;
     use rstest::rstest;
     use rstest_reuse::{apply, template};
+    use std::ffi::OsStr;
     use std::io::{Error, ErrorKind};
     use std::str::FromStr;
     use tempfile::{tempdir, TempDir};
     use which::which;
+
+    #[cfg(unix)]
+    use std::os::unix::ffi::OsStrExt;
 
     struct RepoMaker {
         tmpdir: TempDir,
@@ -568,9 +572,14 @@ mod tests {
             assert!(r.success());
         }
 
-        fn add_remote(&self, remote: &str, url: &str) {
+        fn add_remote<S: AsRef<OsStr>>(&self, remote: &str, url: S) {
             let r = Command::new("git")
-                .args(["remote", "add", remote, url])
+                .args([
+                    OsStr::new("remote"),
+                    OsStr::new("add"),
+                    remote.as_ref(),
+                    url.as_ref(),
+                ])
                 .current_dir(self.path())
                 .status()
                 .unwrap();
@@ -914,6 +923,40 @@ mod tests {
         let lr = LocalRepo::new(maker.path());
         match lr.github_remote("origin") {
             Ok(lr) if lr == repo => (),
+            e => panic!("Got wrong result: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn test_github_remote_invalid_url() {
+        if which("git").is_err() {
+            return;
+        }
+        let maker = RepoMaker::new();
+        maker.init("trunk");
+        maker.add_remote("upstream", "https://git.example.com/repo.git");
+        let lr = LocalRepo::new(maker.path());
+        match lr.github_remote("upstream") {
+            Err(LocalRepoError::InvalidRemoteURL(_)) => (),
+            e => panic!("Got wrong result: {:?}", e),
+        }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_github_remote_non_utf8_url() {
+        if which("git").is_err() {
+            return;
+        }
+        let maker = RepoMaker::new();
+        maker.init("trunk");
+        maker.add_remote("upstream", OsStr::from_bytes(b"../f\xF6\xF6.git"));
+        let lr = LocalRepo::new(maker.path());
+        match lr.github_remote("upstream") {
+            Err(ref e @ LocalRepoError::InvalidUtf8(eu)) => assert_eq!(
+                e.to_string(),
+                format!("Failed to decode output from Git command: {eu}")
+            ),
             e => panic!("Got wrong result: {:?}", e),
         }
     }
