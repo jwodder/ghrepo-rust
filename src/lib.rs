@@ -533,12 +533,12 @@ impl fmt::Display for LocalRepoError {
                 write!(f, "Git repository is in a detached HEAD state")
             }
             LocalRepoError::NoSuchRemote(remote) => {
-                write!(f, "No such remote in Git repository: {}", remote)
+                write!(f, "No such remote in Git repository: {:?}", remote)
             }
             LocalRepoError::NoUpstream(branch) => {
                 write!(
                     f,
-                    "No upstream remote configured for Git branch: {}",
+                    "No upstream remote configured for Git branch: {:?}",
                     branch
                 )
             }
@@ -1215,7 +1215,10 @@ mod tests {
     #[test]
     fn test_display_local_repo_error_no_such_remote() {
         let e = LocalRepoError::NoSuchRemote("origin".to_string());
-        assert_eq!(e.to_string(), "No such remote in Git repository: origin");
+        assert_eq!(
+            e.to_string(),
+            "No such remote in Git repository: \"origin\""
+        );
     }
 
     #[test]
@@ -1223,7 +1226,7 @@ mod tests {
         let e = LocalRepoError::NoUpstream("main".to_string());
         assert_eq!(
             e.to_string(),
-            "No upstream remote configured for Git branch: main"
+            "No upstream remote configured for Git branch: \"main\""
         );
     }
 
