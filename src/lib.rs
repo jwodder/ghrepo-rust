@@ -542,6 +542,42 @@ mod tests {
     use tempfile::{tempdir, TempDir};
     use which::which;
 
+    struct RepoMaker {
+        tmpdir: TempDir,
+    }
+
+    impl RepoMaker {
+        fn new() -> Self {
+            RepoMaker {
+                tmpdir: tempdir().unwrap(),
+            }
+        }
+
+        fn path(&self) -> &Path {
+            self.tmpdir.path()
+        }
+
+        fn init(&self, branch: &str) {
+            let r = Command::new("git")
+                .arg("-c")
+                .arg(format!("init.defaultBranch={branch}"))
+                .arg("init")
+                .current_dir(self.path())
+                .status()
+                .unwrap();
+            assert!(r.success());
+        }
+
+        fn add_remote(&self, remote: &str, url: &str) {
+            let r = Command::new("git")
+                .args(["remote", "add", remote, url])
+                .current_dir(self.path())
+                .status()
+                .unwrap();
+            assert!(r.success());
+        }
+    }
+
     #[test]
     fn test_to_string() {
         let r = GHRepo::new("octocat", "repository").unwrap();
@@ -776,30 +812,6 @@ mod tests {
         assert_eq!(GHRepo::from_str_with_owner(spec, "jwodder"), Ok(r));
     }
 
-    fn mkrepo(branch: &str) -> TempDir {
-        let path = tempdir().unwrap();
-        let r = Command::new("git")
-            .arg("-c")
-            .arg(format!("init.defaultBranch={branch}"))
-            .arg("init")
-            .current_dir(path.path())
-            .status()
-            .unwrap();
-        assert!(r.success());
-        return path;
-    }
-
-    fn mkrepo_remote(branch: &str, remote: &str, remote_url: &str) -> TempDir {
-        let path = mkrepo(branch);
-        let r = Command::new("git")
-            .args(["remote", "add", remote, remote_url])
-            .current_dir(path.path())
-            .status()
-            .unwrap();
-        assert!(r.success());
-        return path;
-    }
-
     #[test]
     fn test_local_repo_new() {
         let lr = LocalRepo::new("/path/to/repo");
@@ -828,8 +840,9 @@ mod tests {
         if which("git").is_err() {
             return;
         }
-        let tmp_path = mkrepo("main");
-        let lr = LocalRepo::new(tmp_path.path());
+        let maker = RepoMaker::new();
+        maker.init("main");
+        let lr = LocalRepo::new(maker.path());
         assert!(lr.is_git_repo().unwrap());
     }
 
@@ -851,8 +864,9 @@ mod tests {
         if which("git").is_err() {
             return;
         }
-        let tmp_path = mkrepo("trunk");
-        let lr = LocalRepo::new(tmp_path.path());
+        let maker = RepoMaker::new();
+        maker.init("trunk");
+        let lr = LocalRepo::new(maker.path());
         match lr.current_branch() {
             Ok(b) if b == "trunk" => (),
             e => panic!("Got wrong result: {:?}", e),
@@ -879,8 +893,9 @@ mod tests {
         if which("git").is_err() {
             return;
         }
-        let tmp_path = mkrepo("trunk");
-        let lr = LocalRepo::new(tmp_path.path());
+        let maker = RepoMaker::new();
+        maker.init("trunk");
+        let lr = LocalRepo::new(maker.path());
         match lr.github_remote("origin") {
             Err(LocalRepoError::CommandFailed(_)) => (),
             e => panic!("Git command did not fail; got: {:?}", e),
@@ -893,8 +908,10 @@ mod tests {
             return;
         }
         let repo = GHRepo::new("octocat", "repository").unwrap();
-        let tmp_path = mkrepo_remote("trunk", "origin", &repo.ssh_url());
-        let lr = LocalRepo::new(tmp_path.path());
+        let maker = RepoMaker::new();
+        maker.init("trunk");
+        maker.add_remote("origin", &repo.ssh_url());
+        let lr = LocalRepo::new(maker.path());
         match lr.github_remote("origin") {
             Ok(lr) if lr == repo => (),
             e => panic!("Got wrong result: {:?}", e),
@@ -907,11 +924,13 @@ mod tests {
             return;
         }
         let repo = GHRepo::new("octocat", "repository").unwrap();
-        let tmp_path = mkrepo_remote("trunk", "origin", &repo.ssh_url());
+        let maker = RepoMaker::new();
+        maker.init("trunk");
+        maker.add_remote("origin", &repo.ssh_url());
         let args = Arguments {
             json: false,
             remote: "origin".to_string(),
-            dirpath: Some(tmp_path.path().to_str().unwrap().to_string()),
+            dirpath: Some(maker.path().to_str().unwrap().to_string()),
         };
         match run(&args) {
             Ok(s) if s == "octocat/repository" => (),
@@ -935,11 +954,13 @@ mod tests {
   \"html_url\": \"https://github.com/octocat/repository\",
   \"ssh_url\": \"git@github.com:octocat/repository.git\"
 }";
-        let tmp_path = mkrepo_remote("trunk", "origin", &repo.ssh_url());
+        let maker = RepoMaker::new();
+        maker.init("trunk");
+        maker.add_remote("origin", &repo.ssh_url());
         let args = Arguments {
             json: true,
             remote: "origin".to_string(),
-            dirpath: Some(tmp_path.path().to_str().unwrap().to_string()),
+            dirpath: Some(maker.path().to_str().unwrap().to_string()),
         };
         match run(&args) {
             Ok(s) if s == expected => (),
