@@ -389,6 +389,20 @@ impl LocalRepo {
             .success())
     }
 
+    /// (Private) Run a Git command in the local repository and return the
+    /// trimmed output
+    fn read(&self, args: &[&str]) -> Result<String, LocalRepoError> {
+        let out = Command::new("git")
+            .args(args)
+            .current_dir(&self.path)
+            .output()?;
+        if out.status.success() {
+            Ok(str::from_utf8(&out.stdout)?.trim().to_string())
+        } else {
+            Err(LocalRepoError::CommandFailed(out.status))
+        }
+    }
+
     /// Get the current branch of the repository
     ///
     /// # Errors
@@ -397,15 +411,7 @@ impl LocalRepo {
     /// or returns a nonzero status, or if the command's output is invalid
     /// UTF-8
     pub fn current_branch(&self) -> Result<String, LocalRepoError> {
-        let out = Command::new("git")
-            .args(["symbolic-ref", "--short", "-q", "HEAD"])
-            .current_dir(&self.path)
-            .output()?;
-        if out.status.success() {
-            Ok(str::from_utf8(&out.stdout)?.trim().to_string())
-        } else {
-            Err(LocalRepoError::CommandFailed(out.status))
-        }
+        self.read(&["symbolic-ref", "--short", "-q", "HEAD"])
     }
 
     /// Determines the GitHub repository that the local repository is a clone
@@ -417,15 +423,8 @@ impl LocalRepo {
     /// or returns a nonzero status, if the command's output is invalid UTF-8,
     /// or if the URL for the given remote is not a valid GitHub URL
     pub fn github_remote(&self, remote: &str) -> Result<GHRepo, LocalRepoError> {
-        let out = Command::new("git")
-            .args(["remote", "get-url", "--", remote])
-            .current_dir(&self.path)
-            .output()?;
-        if out.status.success() {
-            Ok(GHRepo::from_url(str::from_utf8(&out.stdout)?.trim())?)
-        } else {
-            Err(LocalRepoError::CommandFailed(out.status))
-        }
+        let url = self.read(&["remote", "get-url", "--", remote])?;
+        Ok(GHRepo::from_url(&url)?)
     }
 }
 
