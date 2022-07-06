@@ -441,10 +441,16 @@ impl LocalRepo {
     ///
     /// Returns a [`LocalRepoError`] if the invoked Git commit fails to execute
     /// or returns a nonzero status, if the command's output is invalid UTF-8,
-    /// or if the URL for the given remote is not a valid GitHub URL
+    /// if the given remote does not exist, or if the URL for the given remote
+    /// is not a valid GitHub URL
     pub fn github_remote(&self, remote: &str) -> Result<GHRepo, LocalRepoError> {
-        let url = self.read(&["remote", "get-url", "--", remote])?;
-        Ok(GHRepo::from_url(&url)?)
+        match self.read(&["remote", "get-url", "--", remote]) {
+            Ok(url) => Ok(GHRepo::from_url(&url)?),
+            Err(LocalRepoError::CommandFailed(r)) if r.code() == Some(2) => {
+                Err(LocalRepoError::NoSuchRemote(remote.to_string()))
+            }
+            Err(e) => Err(e),
+        }
     }
 }
 
@@ -460,6 +466,10 @@ pub enum LocalRepoError {
     /// Returned by [`LocalRepo::current_branch()`] if the repository is in a
     /// detached `HEAD` state
     DetachedHead,
+
+    /// Returned by [`LocalRepo::github_remote()`] if the named remote does not
+    /// exist.  The argument is the name of the nonexistent remote.
+    NoSuchRemote(String),
 
     /// Returned when the output from Git could not be decoded
     InvalidUtf8(str::Utf8Error),
@@ -481,6 +491,9 @@ impl fmt::Display for LocalRepoError {
             LocalRepoError::DetachedHead => {
                 write!(f, "Git repository is in a detached HEAD state")
             }
+            LocalRepoError::NoSuchRemote(remote) => {
+                write!(f, "No such remote in Git repository: {}", remote)
+            }
             LocalRepoError::InvalidUtf8(e) => {
                 write!(f, "Failed to decode output from Git command: {}", e)
             }
@@ -497,6 +510,7 @@ impl error::Error for LocalRepoError {
             LocalRepoError::CouldNotExecute(e) => Some(e),
             LocalRepoError::CommandFailed(_) => None,
             LocalRepoError::DetachedHead => None,
+            LocalRepoError::NoSuchRemote(_) => None,
             LocalRepoError::InvalidUtf8(e) => Some(e),
             LocalRepoError::InvalidRemoteURL(e) => Some(e),
         }
@@ -970,7 +984,7 @@ mod tests {
         maker.init("trunk");
         let lr = LocalRepo::new(maker.path());
         match lr.github_remote("origin") {
-            Err(LocalRepoError::CommandFailed(_)) => (),
+            Err(LocalRepoError::NoSuchRemote(rem)) if rem == "origin" => (),
             e => panic!("Git command did not fail; got: {:?}", e),
         }
     }
