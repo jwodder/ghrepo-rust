@@ -1,0 +1,68 @@
+use ghrepo::{LocalRepoError, ParseError};
+use std::io::{Error, ErrorKind};
+
+#[test]
+fn test_display_parse_error_invalid_spec() {
+    let e = ParseError::InvalidSpec("foo.bar".to_string());
+    assert_eq!(e.to_string(), "Invalid GitHub repository spec: \"foo.bar\"");
+}
+
+#[test]
+fn test_display_parse_error_invalid_owner() {
+    let e = ParseError::InvalidOwner("foo.bar".to_string());
+    assert_eq!(
+        e.to_string(),
+        "Invalid GitHub repository owner: \"foo.bar\""
+    );
+}
+
+#[test]
+fn test_display_parse_error_invalid_name() {
+    let e = ParseError::InvalidName("foo.git".to_string());
+    assert_eq!(e.to_string(), "Invalid GitHub repository name: \"foo.git\"");
+}
+
+#[test]
+fn test_display_local_repo_error_could_not_execute() {
+    let e = LocalRepoError::CouldNotExecute(Error::from(ErrorKind::NotFound));
+    assert_eq!(
+        e.to_string(),
+        format!(
+            "Failed to execute Git command: {}",
+            Error::from(ErrorKind::NotFound)
+        )
+    );
+}
+
+#[test]
+fn test_display_local_repo_error_detached_head() {
+    let e = LocalRepoError::DetachedHead;
+    assert_eq!(e.to_string(), "Git repository is in a detached HEAD state");
+}
+
+#[test]
+fn test_display_local_repo_error_no_such_remote() {
+    let e = LocalRepoError::NoSuchRemote("origin".to_string());
+    assert_eq!(
+        e.to_string(),
+        "No such remote in Git repository: \"origin\""
+    );
+}
+
+#[test]
+fn test_display_local_repo_error_no_upstream() {
+    let e = LocalRepoError::NoUpstream("main".to_string());
+    assert_eq!(
+        e.to_string(),
+        "No upstream remote configured for Git branch: \"main\""
+    );
+}
+
+#[test]
+fn test_display_local_repo_error_parse_error() {
+    let e = LocalRepoError::InvalidRemoteURL(ParseError::InvalidSpec("foo.bar".to_string()));
+    assert_eq!(
+        e.to_string(),
+        "Repository remote URL is not a GitHub URL: Invalid GitHub repository spec: \"foo.bar\""
+    );
+}
