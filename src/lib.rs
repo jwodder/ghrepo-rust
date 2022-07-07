@@ -30,8 +30,8 @@
 //! ```
 
 use clap::Parser;
+use fancy_regex::Regex;
 use lazy_static::lazy_static;
-use regex::Regex;
 use serde_json::json;
 use std::env;
 use std::error;
@@ -44,37 +44,40 @@ use std::str::{self, FromStr};
 #[cfg(test)]
 extern crate rstest_reuse;
 
-/// Regular expression for a valid GitHub username or organization name.  As of
-/// 2017-07-23, trying to sign up to GitHub with an invalid username or create
-/// an organization with an invalid name gives the message "Username may only
-/// contain alphanumeric characters or single hyphens, and cannot begin or end
-/// with a hyphen".  Additionally, trying to create a user named "none" (case
-/// insensitive) gives the message "Username name 'none' is a reserved word."
+/// Regular expression for a valid GitHub username or organization name.
+///
+/// As of 2017-07-23, trying to sign up to GitHub with an invalid username or
+/// create an organization with an invalid name gives the message "Username may
+/// only contain alphanumeric characters or single hyphens, and cannot begin or
+/// end with a hyphen".  Additionally, trying to create a user named "none"
+/// (case insensitive) gives the message "Username name 'none' is a reserved
+/// word."
 ///
 /// Unfortunately, there are a number of users who made accounts before the
 /// current name restrictions were put in place, and so this regex also needs
 /// to accept names that contain underscores, contain multiple consecutive
 /// hyphens, begin with a hyphen, and/or end with a hyphen.
 ///
-/// Note that this regex does not check that the owner name is not "none", as
-/// the `regex` crate does not support lookaround; for full validation, use
-/// [`GHRepo::is_valid_owner()`].
-const GH_OWNER_RGX: &str = r"[-_A-Za-z0-9]+";
+/// Note that this regex requires an engine with lookaround support, such as
+/// [`fancy-regex`](https://crates.io/crates/fancy-regex).
+pub const GH_OWNER_RGX: &str = r"(?![Nn][Oo][Nn][Ee]($|[^-_A-Za-z0-9]))[-_A-Za-z0-9]+";
 
-/// Regular expression for a valid GitHub repository name.  Testing as of
-/// 2017-05-21 indicates that repository names can be composed of alphanumeric
-/// ASCII characters, hyphens, periods, and/or underscores, with the names
-/// ``.`` and ``..`` being reserved and names ending with ``.git`` forbidden.
+/// Regular expression for a valid GitHub repository name.
 ///
-/// Note that this regex does not check that the name does not end with ".git",
-/// as the `regex` crate does not support lookaround; for full validation, use
-/// [`GHRepo::is_valid_name()`].
-const GH_REPO_RGX: &str = r"(?:\.?[-A-Za-z0-9_][-A-Za-z0-9_.]*?|\.\.[-A-Za-z0-9_.]+?)";
+/// Testing as of 2017-05-21 indicates that repository names can be composed of
+/// alphanumeric ASCII characters, hyphens, periods, and/or underscores, with
+/// the names `.` and `..` being reserved and names ending with `.git` (case
+/// insensitive) forbidden.
+///
+/// Note that this regex requires an engine with lookaround support, such as
+/// [`fancy-regex`](https://crates.io/crates/fancy-regex).
+pub const GH_NAME_RGX: &str =
+    r"(?:\.?[-A-Za-z0-9_][-A-Za-z0-9_.]*|\.\.[-A-Za-z0-9_.]+)(?<!\.[Gg][Ii][Tt])";
 
 lazy_static! {
     /// Convenience regular expression for `<owner>/<name>`, including named
     /// capturing groups
-    static ref OWNER_NAME: String = format!(r"(?P<owner>{})/(?P<name>{})", GH_OWNER_RGX, GH_REPO_RGX);
+    static ref OWNER_NAME: String = format!(r"(?P<owner>{})/(?P<name>{})", GH_OWNER_RGX, GH_NAME_RGX);
 }
 
 /// Error returned when trying to construct a [`GHRepo`] with invalid arguments
@@ -169,7 +172,7 @@ impl GHRepo {
         lazy_static! {
             static ref RGX: Regex = Regex::new(format!("^{GH_OWNER_RGX}$").as_str()).unwrap();
         }
-        RGX.is_match(s) && s.to_ascii_lowercase() != "none"
+        RGX.is_match(s).unwrap()
     }
 
     /// Test whether a string is a valid repository name.
@@ -184,9 +187,9 @@ impl GHRepo {
     /// ```
     pub fn is_valid_name(s: &str) -> bool {
         lazy_static! {
-            static ref RGX: Regex = Regex::new(format!("^{GH_REPO_RGX}$").as_str()).unwrap();
+            static ref RGX: Regex = Regex::new(format!("^{GH_NAME_RGX}$").as_str()).unwrap();
         }
-        RGX.is_match(s) && !s.to_ascii_lowercase().ends_with(".git")
+        RGX.is_match(s).unwrap()
     }
 
     /// Like [`GHRepo::from_str()`], except that if `s` is just a repository
@@ -294,16 +297,14 @@ impl GHRepo {
             ];
         }
         for crgx in &*GITHUB_URL_CREGEXEN {
-            if let Some(caps) = crgx.captures(s) {
+            if let Some(caps) = crgx.captures(s).unwrap() {
                 return match GHRepo::new(
                     caps.name("owner").unwrap().as_str(),
                     caps.name("name").unwrap().as_str(),
                 ) {
                     r @ Ok(_) => r,
-                    // If the string matched a URL regex but had a bad owner or
-                    // name (e.g., an owner of "none"), ensure the returned
-                    // error reports the full string rather than just the bad
-                    // segment
+                    // Ensure the returned error reports the full string rather
+                    // than just the bad segment
                     Err(_) => Err(ParseError::InvalidSpec(s.to_string())),
                 };
             }
@@ -333,15 +334,14 @@ impl FromStr for GHRepo {
         lazy_static! {
             static ref RGX: Regex = Regex::new(format!("^{}$", *OWNER_NAME).as_str()).unwrap();
         }
-        if let Some(caps) = RGX.captures(s) {
+        if let Some(caps) = RGX.captures(s).unwrap() {
             return match GHRepo::new(
                 caps.name("owner").unwrap().as_str(),
                 caps.name("name").unwrap().as_str(),
             ) {
                 r @ Ok(_) => r,
-                // If the string has a bad owner or name (e.g., an owner of
-                // "none"), ensure the returned error reports the full string
-                // rather than just the bad segment
+                // Ensure the returned error reports the full string rather
+                // than just the bad segment
                 Err(_) => Err(ParseError::InvalidSpec(s.to_string())),
             };
         }
