@@ -34,7 +34,7 @@ jobs:
       - name: Test with coverage
         uses: actions-rs/tarpaulin@v0.1
         with:
-          args: '--exclude-files "tests/*"'
+          args: '--exclude-files "tests/*" --follow-exec'
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
