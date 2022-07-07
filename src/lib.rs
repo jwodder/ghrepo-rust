@@ -29,10 +29,8 @@
 //! # }
 //! ```
 
-#[macro_use]
-extern crate lazy_static;
-
 use clap::Parser;
+use lazy_static::lazy_static;
 use regex::Regex;
 use serde_json::json;
 use std::env;
