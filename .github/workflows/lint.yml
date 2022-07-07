@@ -18,10 +18,10 @@ jobs:
           rustup component add clippy
 
       - name: Check code
-        run: cargo check --all-targets
+        run: cargo check --all-features --all-targets
 
       - name: Clippy
-        run: cargo clippy --all-features
+        run: cargo clippy --all-features --all-targets
 
       - name: Check formatting
         run: cargo fmt --check

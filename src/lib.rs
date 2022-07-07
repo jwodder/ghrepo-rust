@@ -42,7 +42,7 @@ use std::process::{Command, ExitStatus, Stdio};
 use std::str::{self, FromStr};
 
 #[cfg(test)]
-use rstest_reuse;
+extern crate rstest_reuse;
 
 /// Regular expression for a valid GitHub username or organization name.  As of
 /// 2017-07-23, trying to sign up to GitHub with an invalid username or create

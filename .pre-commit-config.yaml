@@ -13,7 +13,7 @@ repos:
     rev: v1.0
     hooks:
       - id: cargo-check
-        args: ["--all-targets"]
+        args: ["--all-features", "--all-targets"]
       - id: clippy
-        args: ["--all-features"]
+        args: ["--all-features", "--all-targets"]
       - id: fmt
