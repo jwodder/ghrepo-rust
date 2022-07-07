@@ -245,3 +245,19 @@ fn test_from_str_with_owner(#[case] spec: &str, #[case] owner: &str, #[case] nam
     let r = GHRepo::new(owner, name).unwrap();
     assert_eq!(GHRepo::from_str_with_owner(spec, "jwodder"), Ok(r));
 }
+
+#[test]
+fn test_new_bad_owner() {
+    assert_eq!(
+        GHRepo::new("None", "repo.git"),
+        Err(ParseError::InvalidOwner(String::from("None")))
+    );
+}
+
+#[test]
+fn test_new_bad_repo() {
+    assert_eq!(
+        GHRepo::new("Noners", "repo.git"),
+        Err(ParseError::InvalidName(String::from("repo.git")))
+    );
+}
