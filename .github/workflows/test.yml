@@ -41,14 +41,20 @@ jobs:
       - name: Test crate
         run: cargo test --verbose
         env:
-          LLVM_PROFILE_FILE: ".coverage/ghrepo-%p-%m.profraw"
+          LLVM_PROFILE_FILE: "target/coverage/prof/%p-%m.profraw"
           RUSTFLAGS: "-Cinstrument-coverage"
 
       - name: Create coverage report
         run: |
-          grcov --binary-path target/debug -s . -t lcov --branch -o lcov.info \
-            --excl-start 'mod tests \{' \
-            .coverage
+         grcov \
+           --source-dir . \
+           --binary-path target/debug \
+           --branch \
+           --excl-start 'mod tests \{' \
+           --ignore 'tests/*' \
+           -t lcov \
+           -o lcov.info \
+           target/coverage/prof
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
