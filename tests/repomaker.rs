@@ -32,11 +32,7 @@ impl RepoMaker {
     }
 
     pub fn init(&self, branch: &str) {
-        self.run(&[
-            "-c",
-            format!("init.defaultBranch={branch}").as_str(),
-            "init",
-        ])
+        self.run(&["-c", &format!("init.defaultBranch={branch}"), "init"])
     }
 
     pub fn add_remote<S: AsRef<OsStr>>(&self, remote: &str, url: S) {
@@ -49,7 +45,7 @@ impl RepoMaker {
     }
 
     pub fn set_upstream(&self, branch: &str, remote: &str) {
-        self.run(&["config", format!("branch.{branch}.remote").as_str(), remote])
+        self.run(&["config", &format!("branch.{branch}.remote"), remote])
     }
 
     pub fn detach(&self) {

@@ -165,7 +165,7 @@ impl GHRepo {
     /// ```
     pub fn is_valid_owner(s: &str) -> bool {
         lazy_static! {
-            static ref RGX: Regex = Regex::new(format!("^{GH_OWNER_RGX}$").as_str()).unwrap();
+            static ref RGX: Regex = Regex::new(&format!("^{GH_OWNER_RGX}$")).unwrap();
         }
         RGX.is_match(s).unwrap()
     }
@@ -182,7 +182,7 @@ impl GHRepo {
     /// ```
     pub fn is_valid_name(s: &str) -> bool {
         lazy_static! {
-            static ref RGX: Regex = Regex::new(format!("^{GH_NAME_RGX}$").as_str()).unwrap();
+            static ref RGX: Regex = Regex::new(&format!("^{GH_NAME_RGX}$")).unwrap();
         }
         RGX.is_match(s).unwrap()
     }
@@ -271,23 +271,23 @@ impl GHRepo {
     pub fn from_url(s: &str) -> Result<Self, ParseError> {
         lazy_static! {
             static ref GITHUB_URL_CREGEXEN: [Regex; 4] = [
-                Regex::new(format!(
+                Regex::new(&format!(
                     r"^(?:https?://(?:[^@:/]+(?::[^@/]+)?@)?)?(?:www\.)?github\.com/{}(?:\.git)?/?$",
                     *OWNER_NAME,
-                ).as_str())
+                ))
                 .unwrap(),
-                Regex::new(format!(
+                Regex::new(&format!(
                     r"^(?:https?://)?api\.github\.com/repos/{}$",
                     *OWNER_NAME
-                ).as_str())
+                ))
                 .unwrap(),
                 Regex::new(
-                    format!(r"^git://github\.com/{}(?:\.git)?$", *OWNER_NAME).as_str()
+                    &format!(r"^git://github\.com/{}(?:\.git)?$", *OWNER_NAME)
                 ).unwrap(),
-                Regex::new(format!(
+                Regex::new(&format!(
                     r"^(?:ssh://)?git@github\.com:{}(?:\.git)?$",
                     *OWNER_NAME
-                ).as_str())
+                ))
                 .unwrap(),
             ];
         }
@@ -327,7 +327,7 @@ impl FromStr for GHRepo {
     /// specifier
     fn from_str(s: &str) -> Result<Self, ParseError> {
         lazy_static! {
-            static ref RGX: Regex = Regex::new(format!("^{}$", *OWNER_NAME).as_str()).unwrap();
+            static ref RGX: Regex = Regex::new(&format!("^{}$", *OWNER_NAME)).unwrap();
         }
         if let Some(caps) = RGX.captures(s).unwrap() {
             return match GHRepo::new(
@@ -467,12 +467,7 @@ impl LocalRepo {
     /// if the branch does not have a remote configured, if the remote
     /// does not exist, or if the URL for the remote is not a valid GitHub URL
     pub fn branch_upstream(&self, branch: &str) -> Result<GHRepo, LocalRepoError> {
-        match self.read(&[
-            "config",
-            "--get",
-            "--",
-            format!("branch.{branch}.remote").as_str(),
-        ]) {
+        match self.read(&["config", "--get", "--", &format!("branch.{branch}.remote")]) {
             Ok(upstream) => self.github_remote(&upstream),
             Err(LocalRepoError::CommandFailed(r)) if r.code() == Some(1) => {
                 Err(LocalRepoError::NoUpstream(branch.to_string()))
