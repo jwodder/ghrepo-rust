@@ -4,7 +4,7 @@ on:
   push:
   pull_request:
   schedule:
-    - cron: '0 0 1 * *'
+    - cron: '0 12 * * *'
 
 jobs:
   test:
@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         toolchain:
-          - '1.60'
+          - minimal
           - stable
           - beta
           - nightly
@@ -28,9 +28,20 @@ jobs:
           git config --global user.email 'ghactions@nil.nil'
 
       - name: Install Rust
+        if: matrix.toolchain != 'minimal'
         run: |
           rustup update ${{ matrix.toolchain }}
           rustup default ${{ matrix.toolchain }}
+
+      - name: Install minimal supported Rust
+        if: matrix.toolchain == 'minimal'
+        run: |
+          rust_version="$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].rust_version')"
+          rustup update "$rust_version"
+          rustup default "$rust_version"
+
+      - name: Install grcov
+        run: |
           rustup component add llvm-tools-preview
           cargo install grcov
 
@@ -62,5 +73,16 @@ jobs:
         with:
           files: lcov.info
           fail_ci_if_error: false
+
+      - name: Install linters
+        run: |
+          rustup component add clippy
+          rustup component add rustfmt
+
+      - name: Check code
+        run: cargo clippy --all-features --all-targets -- -Dwarnings
+
+      - name: Check formatting
+        run: cargo fmt --check
 
 # vim:set et sts=2:

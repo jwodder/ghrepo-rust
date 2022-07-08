@@ -1,0 +1,23 @@
+name: Check docs
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 12 * * *'
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Install nightly Rust
+        run: |
+          rustup update nightly
+          rustup default nightly
+
+      - run: cargo rustdoc --all-features -- -Dwarnings
+
+# vim:set et sts=2:
