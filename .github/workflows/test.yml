@@ -46,6 +46,7 @@ jobs:
           RUSTFLAGS: "-Cinstrument-coverage"
 
       - name: Create coverage report
+        if: matrix.toolchain == 'stable'
         run: |
          grcov \
            --source-dir . \
@@ -59,6 +60,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
+        if: matrix.toolchain == 'stable'
         with:
           files: lcov.info
           fail_ci_if_error: false
