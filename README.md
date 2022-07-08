@@ -1,9 +1,9 @@
-[![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![CI Status](https://github.com/jwodder/ghrepo-rust/actions/workflows/test.yml/badge.svg)](https://github.com/jwodder/ghrepo-rust/actions/workflows/test.yml)
 [![codecov.io](https://codecov.io/gh/jwodder/ghrepo-rust/branch/master/graph/badge.svg)](https://codecov.io/gh/jwodder/ghrepo-rust)
 [![MIT License](https://img.shields.io/github/license/jwodder/ghrepo.svg)](https://opensource.org/licenses/MIT)
 
-[GitHub](https://github.com/jwodder/ghrepo-rust) <!-- | [crates.io](https://crates.io/crates/ghrepo) --> <!-- | [Documentation](https://docs.rs/ghrepo) --> | [Issues](https://github.com/jwodder/ghrepo-rust/issues) <!-- | [Changelog](https://github.com/jwodder/ghrepo-rust/blob/master/CHANGELOG.md) -->
+[GitHub](https://github.com/jwodder/ghrepo-rust) | [crates.io](https://crates.io/crates/ghrepo) | [Documentation](https://docs.rs/ghrepo) | [Issues](https://github.com/jwodder/ghrepo-rust/issues)
 
 `ghrepo` extracts a GitHub repository's owner & name from various GitHub URL
 formats (or just from a string of the form `OWNER/REPONAME` or `REPONAME`), and
@@ -11,6 +11,22 @@ the resulting object provides properties for going in reverse to determine the
 possible URLs.  Also included is a struct for performing a couple useful
 inspections on local Git repositories, including determining the corresponding
 GitHub owner & repository name.
+
+Installation
+============
+
+`ghrepo` requires version 1.60 of Rust or higher.  To use the `ghrepo` library
+in your Cargo project, add the following to your `Cargo.toml`:
+
+```toml
+[dependencies]
+ghrepo = "0.1.0"
+```
+
+To install the `ghrepo` command on your system, use `cargo install`:
+
+    cargo install ghrepo
+
 
 Example
 =======

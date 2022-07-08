@@ -7,7 +7,7 @@ description = "Parse & construct GitHub repository URLs & specifiers"
 authors = ["John Thorvald Wodder II <ghrepo@varonathe.org>"]
 repository = "https://github.com/jwodder/ghrepo-rust"
 license = "MIT"
-keywords = ["GitHub", "URL parsing", "repository"]
+keywords = ["GitHub", "URL-parsing", "repository"]
 categories = ["command-line-utilities"]
 exclude = ["/.*"]
 
