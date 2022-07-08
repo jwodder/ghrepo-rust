@@ -1,5 +1,3 @@
-#![warn(warnings)]
-
 use clap::Parser;
 use ghrepo::{LocalRepo, LocalRepoError};
 use serde_json::json;
