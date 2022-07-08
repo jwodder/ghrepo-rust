@@ -8,17 +8,17 @@ use std::process::exit;
 /// Show current GitHub repository
 #[derive(Debug, Parser)]
 #[clap(version)]
-pub struct Arguments {
+struct Arguments {
     /// Output JSON
     #[clap(short = 'J', long)]
-    pub json: bool,
+    json: bool,
 
     /// Parse the GitHub URL from the given remote
     #[clap(short, long, default_value = "origin")]
-    pub remote: String,
+    remote: String,
 
     /// Path to a clone of a GitHub repo  [default: current directory]
-    pub dirpath: Option<String>,
+    dirpath: Option<String>,
 }
 
 fn main() {
@@ -32,7 +32,7 @@ fn main() {
     }
 }
 
-pub fn run(args: &Arguments) -> Result<String, LocalRepoError> {
+fn run(args: &Arguments) -> Result<String, LocalRepoError> {
     let lr = match &args.dirpath {
         Some(p) => LocalRepo::new(&p),
         None => LocalRepo::for_cwd()?,
