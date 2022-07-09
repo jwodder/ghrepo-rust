@@ -30,7 +30,7 @@ jobs:
         run: |
           rustup update ${{ matrix.toolchain }}
           rustup default ${{ matrix.toolchain }}
-          cargo install cargo-tarpaulin
+          cargo install cargo-tarpaulin@0.19.1
 
       - name: Test with coverage
         run: cargo tarpaulin --out Xml --exclude-files "tests/*" --follow-exec
