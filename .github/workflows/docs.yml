@@ -19,6 +19,9 @@ jobs:
           toolchain: nightly
           default: true
 
-      - run: cargo rustdoc --all-features -- -Dwarnings
+      - name: Check docs
+        run: cargo doc --no-deps --all-features
+        env:
+          RUSTDOCFLAGS: -Dwarnings
 
 # vim:set et sts=2:
