@@ -12,8 +12,6 @@ repos:
   - repo: https://github.com/doublify/pre-commit-rust
     rev: v1.0
     hooks:
-      - id: cargo-check
-        args: ["--all-features", "--all-targets"]
       - id: clippy
-        args: ["--all-features", "--all-targets"]
+        args: ["--all-features", "--all-targets", "--", "-Dwarnings"]
       - id: fmt
