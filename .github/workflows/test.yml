@@ -29,16 +29,26 @@ jobs:
 
       - name: Install Rust
         if: matrix.toolchain != 'minimal'
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          default: true
+          components: clippy, rustfmt
+
+      - name: Determine minimal supported Rust
+        if: matrix.toolchain == 'minimal'
+        id: minimal-version
         run: |
-          rustup update ${{ matrix.toolchain }}
-          rustup default ${{ matrix.toolchain }}
+          rust_version="$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].rust_version')"
+          echo "::set-output name=msrv::$rust_version"
 
       - name: Install minimal supported Rust
         if: matrix.toolchain == 'minimal'
-        run: |
-          rust_version="$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].rust_version')"
-          rustup update "$rust_version"
-          rustup default "$rust_version"
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ steps.minimal-version.outputs.msrv }}
+          default: true
+          components: clippy, rustfmt
 
       - name: Test with coverage
         uses: actions-rs/tarpaulin@v0.1
@@ -50,11 +60,6 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           fail_ci_if_error: false
-
-      - name: Install linters
-        run: |
-          rustup component add clippy
-          rustup component add rustfmt
 
       - name: Check code
         run: cargo clippy --all-features --all-targets -- -Dwarnings
