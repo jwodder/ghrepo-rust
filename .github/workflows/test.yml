@@ -33,7 +33,6 @@ jobs:
         with:
           toolchain: ${{ matrix.toolchain }}
           default: true
-          components: clippy, rustfmt
 
       - name: Determine minimal supported Rust
         if: matrix.toolchain == 'minimal'
@@ -48,7 +47,6 @@ jobs:
         with:
           toolchain: ${{ steps.minimal-version.outputs.msrv }}
           default: true
-          components: clippy, rustfmt
 
       - name: Activate cache
         uses: Swatinem/rust-cache@v2
@@ -64,10 +62,46 @@ jobs:
         with:
           fail_ci_if_error: false
 
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          default: true
+          components: clippy, rustfmt
+
+      - name: Activate cache
+        uses: Swatinem/rust-cache@v2
+
       - name: Check code
         run: cargo clippy --all-features --all-targets -- -Dwarnings
 
       - name: Check formatting
         run: cargo fmt --check
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
+
+      - name: Install nightly Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          default: true
+
+      - name: Activate cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check docs
+        run: cargo doc --no-deps --all-features
+        env:
+          RUSTDOCFLAGS: -Dwarnings
 
 # vim:set et sts=2:
