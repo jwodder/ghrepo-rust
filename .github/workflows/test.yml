@@ -50,6 +50,9 @@ jobs:
           default: true
           components: clippy, rustfmt
 
+      - name: Activate cache
+        uses: Swatinem/rust-cache@v2
+
       - name: Test with coverage
         uses: actions-rs/tarpaulin@v0.1
         with:

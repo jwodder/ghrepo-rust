@@ -19,6 +19,9 @@ jobs:
           toolchain: nightly
           default: true
 
+      - name: Activate cache
+        uses: Swatinem/rust-cache@v2
+
       - name: Check docs
         run: cargo doc --no-deps --all-features
         env:
