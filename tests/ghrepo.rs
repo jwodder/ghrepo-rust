@@ -186,7 +186,7 @@ fn test_bad_name(#[case] name: &str) {
     "octocat",
     "Hello-World"
 )]
-fn repo_urls(#[case] url: &str, owner: &str, name: &str) {}
+fn repo_urls(#[case] url: &str, #[case] owner: &str, #[case] name: &str) {}
 
 #[template]
 #[rstest]
