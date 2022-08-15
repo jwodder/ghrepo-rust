@@ -12,7 +12,7 @@ categories = ["command-line-utilities"]
 exclude = ["/.*"]
 
 [dependencies]
-clap = { version = "3.2.16", default-features = false, features = ["derive", "std", "suggestions", "wrap_help"] }
+clap = { version = "3.2.17", default-features = false, features = ["derive", "std", "suggestions", "wrap_help"] }
 fancy-regex = "0.10.0"
 lazy_static = "1.4.0"
 serde = "1.0.142"
