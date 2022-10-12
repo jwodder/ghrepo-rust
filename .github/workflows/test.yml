@@ -39,7 +39,7 @@ jobs:
         id: minimal-version
         run: |
           rust_version="$(cargo metadata --no-deps --format-version=1 | jq -r '.packages[0].rust_version')"
-          echo "::set-output name=msrv::$rust_version"
+          echo "msrv=$rust_version" >> "$GITHUB_OUTPUT"
 
       - name: Install minimal supported Rust
         if: matrix.toolchain == 'minimal'
