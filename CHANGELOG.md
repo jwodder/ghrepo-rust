@@ -1,3 +1,8 @@
+v0.3.0 (in development)
+-----------------------
+- Adjust `Display` format of `LocalRepoError::CommandFailed` to use the std
+  `ExitStatus` Display
+
 v0.2.1 (2022-10-19)
 -------------------
 - Restore command usage in `--help` output

@@ -134,7 +134,7 @@ dependencies = [
 
 [[package]]
 name = "ghrepo"
-version = "0.2.1"
+version = "0.3.0-dev"
 dependencies = [
  "clap",
  "fancy-regex",

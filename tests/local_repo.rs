@@ -96,7 +96,10 @@ fn test_github_remote_empty() {
     let lr = LocalRepo::new(tmp_path.path());
     match lr.github_remote("origin") {
         Err(e @ LocalRepoError::CommandFailed(_)) => {
-            assert_eq!(e.to_string(), "Git command exited with return code 128")
+            assert_eq!(
+                e.to_string(),
+                "Git command exited unsuccessfully: exit status: 128"
+            )
         }
         e => panic!("Git command did not fail; got: {:?}", e),
     }

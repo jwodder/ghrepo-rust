@@ -511,10 +511,9 @@ impl fmt::Display for LocalRepoError {
             LocalRepoError::CouldNotExecute(e) => {
                 write!(f, "Failed to execute Git command: {}", e)
             }
-            LocalRepoError::CommandFailed(r) => match r.code() {
-                Some(rc) => write!(f, "Git command exited with return code {}", rc),
-                None => write!(f, "Git command was killed by a signal"),
-            },
+            LocalRepoError::CommandFailed(r) => {
+                write!(f, "Git command exited unsuccessfully: {}", r)
+            }
             LocalRepoError::DetachedHead => {
                 write!(f, "Git repository is in a detached HEAD state")
             }
