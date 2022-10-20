@@ -1,3 +1,7 @@
+v0.2.1 (in development)
+-----------------------
+- Restore command usage in `--help` output
+
 v0.2.0 (2022-10-18)
 -------------------
 - Update clap dependency to 4.0
