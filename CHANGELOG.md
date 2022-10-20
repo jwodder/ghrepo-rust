@@ -1,5 +1,5 @@
-v0.2.1 (in development)
------------------------
+v0.2.1 (2022-10-19)
+-------------------
 - Restore command usage in `--help` output
 
 v0.2.0 (2022-10-18)
