@@ -16,7 +16,7 @@ clap = { version = "4.0.15", default-features = false, features = ["derive", "er
 fancy-regex = "0.10.0"
 lazy_static = "1.4.0"
 serde = "1.0.147"
-serde_json = { version = "1.0.86", features = ["preserve_order"] }
+serde_json = { version = "1.0.87", features = ["preserve_order"] }
 
 [dev-dependencies]
 rstest = { version = "0.15.0", default-features = false }
