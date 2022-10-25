@@ -29,10 +29,9 @@ jobs:
 
       - name: Install Rust
         if: matrix.toolchain != 'minimal'
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.toolchain }}
-          default: true
 
       - name: Determine minimal supported Rust
         if: matrix.toolchain == 'minimal'
@@ -43,10 +42,9 @@ jobs:
 
       - name: Install minimal supported Rust
         if: matrix.toolchain == 'minimal'
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ steps.minimal-version.outputs.msrv }}
-          default: true
 
       - name: Activate cache
         uses: Swatinem/rust-cache@v2
@@ -72,10 +70,9 @@ jobs:
           git config --global user.email 'ghactions@nil.nil'
 
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
-          default: true
           components: llvm-tools-preview
 
       - name: Activate cache
@@ -102,10 +99,9 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
-          default: true
           components: clippy, rustfmt
 
       - name: Activate cache
@@ -124,10 +120,9 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Install nightly Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: nightly
-          default: true
 
       - name: Activate cache
         uses: Swatinem/rust-cache@v2
