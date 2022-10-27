@@ -1,7 +1,7 @@
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![CI Status](https://github.com/jwodder/ghrepo-rust/actions/workflows/test.yml/badge.svg)](https://github.com/jwodder/ghrepo-rust/actions/workflows/test.yml)
 [![codecov.io](https://codecov.io/gh/jwodder/ghrepo-rust/branch/master/graph/badge.svg)](https://codecov.io/gh/jwodder/ghrepo-rust)
-[![MIT License](https://img.shields.io/github/license/jwodder/ghrepo.svg)](https://opensource.org/licenses/MIT)
+[![MIT License](https://img.shields.io/github/license/jwodder/ghrepo-rust.svg)](https://opensource.org/licenses/MIT)
 
 [GitHub](https://github.com/jwodder/ghrepo-rust) | [crates.io](https://crates.io/crates/ghrepo) | [Documentation](https://docs.rs/ghrepo) | [Issues](https://github.com/jwodder/ghrepo-rust/issues) | [Changelog](https://github.com/jwodder/ghrepo-rust/blob/master/CHANGELOG.md)
 
