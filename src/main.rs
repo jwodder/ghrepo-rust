@@ -32,7 +32,7 @@ fn main() {
 
 fn run(args: &Arguments) -> Result<String, LocalRepoError> {
     let lr = match &args.dirpath {
-        Some(p) => LocalRepo::new(&p),
+        Some(p) => LocalRepo::new(p),
         None => LocalRepo::for_cwd()?,
     };
     let gr = lr.github_remote(&args.remote)?;
