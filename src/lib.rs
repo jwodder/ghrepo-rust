@@ -412,6 +412,7 @@ impl LocalRepo {
         let out = Command::new("git")
             .args(args)
             .current_dir(&self.path)
+            .stderr(Stdio::inherit())
             .output()?;
         if out.status.success() {
             Ok(str::from_utf8(&out.stdout)?.trim().to_string())

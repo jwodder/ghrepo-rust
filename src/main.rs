@@ -23,6 +23,7 @@ fn main() {
     let args = Arguments::parse();
     match run(&args) {
         Ok(s) => println!("{}", s),
+        Err(LocalRepoError::CommandFailed(rc)) => exit(rc.code().unwrap_or(1)),
         Err(e) => {
             eprintln!("ghrepo: {}", e);
             exit(1);
