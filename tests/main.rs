@@ -27,14 +27,14 @@ fn test_run_json() {
     }
     let repo = GHRepo::new("octocat", "repository").unwrap();
     let expected = "{
-  \"owner\": \"octocat\",
-  \"name\": \"repository\",
-  \"fullname\": \"octocat/repository\",
-  \"api_url\": \"https://api.github.com/repos/octocat/repository\",
-  \"clone_url\": \"https://github.com/octocat/repository.git\",
-  \"git_url\": \"git://github.com/octocat/repository.git\",
-  \"html_url\": \"https://github.com/octocat/repository\",
-  \"ssh_url\": \"git@github.com:octocat/repository.git\"
+    \"owner\": \"octocat\",
+    \"name\": \"repository\",
+    \"fullname\": \"octocat/repository\",
+    \"api_url\": \"https://api.github.com/repos/octocat/repository\",
+    \"clone_url\": \"https://github.com/octocat/repository.git\",
+    \"git_url\": \"git://github.com/octocat/repository.git\",
+    \"html_url\": \"https://github.com/octocat/repository\",
+    \"ssh_url\": \"git@github.com:octocat/repository.git\"
 }";
     let maker = RepoMaker::new();
     maker.init("trunk");

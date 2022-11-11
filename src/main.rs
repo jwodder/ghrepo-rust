@@ -1,6 +1,5 @@
 use clap::Parser;
 use ghrepo::{LocalRepo, LocalRepoError};
-use serde_json::json;
 use std::process::exit;
 
 /// Show current GitHub repository
@@ -38,17 +37,32 @@ fn run(args: &Arguments) -> Result<String, LocalRepoError> {
     };
     let gr = lr.github_remote(&args.remote)?;
     if args.json {
-        let data = json!({
-            "owner": gr.owner(),
-            "name": gr.name(),
-            "fullname": gr.to_string(),
-            "api_url": gr.api_url(),
-            "clone_url": gr.clone_url(),
-            "git_url": gr.git_url(),
-            "html_url": gr.html_url(),
-            "ssh_url": gr.ssh_url(),
-        });
-        Ok(serde_json::to_string_pretty(&data).unwrap())
+        // The various values here all consist entirely of printable ASCII
+        // characters (as long as GitHub owner & repo names continue to only
+        // contain printable ASCII characters), so we don't need any special
+        // JSON processing for escapes.
+        Ok(format!(
+            concat!(
+                "{{\n",
+                "    \"owner\": \"{}\",\n",
+                "    \"name\": \"{}\",\n",
+                "    \"fullname\": \"{}\",\n",
+                "    \"api_url\": \"{}\",\n",
+                "    \"clone_url\": \"{}\",\n",
+                "    \"git_url\": \"{}\",\n",
+                "    \"html_url\": \"{}\",\n",
+                "    \"ssh_url\": \"{}\"\n",
+                "}}"
+            ),
+            gr.owner(),
+            gr.name(),
+            gr.to_string(),
+            gr.api_url(),
+            gr.clone_url(),
+            gr.git_url(),
+            gr.html_url(),
+            gr.ssh_url()
+        ))
     } else {
         Ok(gr.to_string())
     }

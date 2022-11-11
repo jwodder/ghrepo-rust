@@ -69,14 +69,14 @@ owner, name, fullname, and individual URLs, like so:
 
 ```json
 {
-  "owner": "jwodder",
-  "name": "ghrepo-rust",
-  "fullname": "jwodder/ghrepo-rust",
-  "api_url": "https://api.github.com/repos/jwodder/ghrepo-rust",
-  "clone_url": "https://github.com/jwodder/ghrepo-rust.git",
-  "git_url": "git://github.com/jwodder/ghrepo-rust.git",
-  "html_url": "https://github.com/jwodder/ghrepo-rust",
-  "ssh_url": "git@github.com:jwodder/ghrepo-rust.git"
+    "owner": "jwodder",
+    "name": "ghrepo-rust",
+    "fullname": "jwodder/ghrepo-rust",
+    "api_url": "https://api.github.com/repos/jwodder/ghrepo-rust",
+    "clone_url": "https://github.com/jwodder/ghrepo-rust.git",
+    "git_url": "git://github.com/jwodder/ghrepo-rust.git",
+    "html_url": "https://github.com/jwodder/ghrepo-rust",
+    "ssh_url": "git@github.com:jwodder/ghrepo-rust.git"
 }
 ```
 
