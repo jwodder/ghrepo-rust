@@ -291,15 +291,13 @@ impl GHRepo {
         }
         for crgx in &*GITHUB_URL_CREGEXEN {
             if let Some(caps) = crgx.captures(s).unwrap() {
-                return match GHRepo::new(
+                return GHRepo::new(
                     caps.name("owner").unwrap().as_str(),
                     caps.name("name").unwrap().as_str(),
-                ) {
-                    r @ Ok(_) => r,
-                    // Ensure the returned error reports the full string rather
-                    // than just the bad segment
-                    Err(_) => Err(ParseError::InvalidSpec(s.to_string())),
-                };
+                )
+                // Ensure the returned error reports the full string rather
+                // than just the bad segment
+                .map_err(|_| ParseError::InvalidSpec(s.to_string()));
             }
         }
         Err(ParseError::InvalidSpec(s.to_string()))
@@ -328,15 +326,13 @@ impl FromStr for GHRepo {
             static ref RGX: Regex = Regex::new(&format!("^{}$", *OWNER_NAME)).unwrap();
         }
         if let Some(caps) = RGX.captures(s).unwrap() {
-            return match GHRepo::new(
+            return GHRepo::new(
                 caps.name("owner").unwrap().as_str(),
                 caps.name("name").unwrap().as_str(),
-            ) {
-                r @ Ok(_) => r,
-                // Ensure the returned error reports the full string rather
-                // than just the bad segment
-                Err(_) => Err(ParseError::InvalidSpec(s.to_string())),
-            };
+            )
+            // Ensure the returned error reports the full string rather than
+            // just the bad segment
+            .map_err(|_| ParseError::InvalidSpec(s.to_string()));
         }
         GHRepo::from_url(s)
     }
