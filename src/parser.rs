@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 /// Split a string into a maximal prefix of chars that match `pred` and the
 /// remainder of the string
 fn span<P>(s: &str, mut pred: P) -> (&str, &str)
