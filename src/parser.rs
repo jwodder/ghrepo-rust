@@ -71,11 +71,12 @@ enum State {
 /// - `[http[s]://]api.github.com/repos/<owner>/<name>`
 /// - `git://github.com/<owner>/<name>[.git]`
 /// - `[ssh://]git@github.com:<owner>/<name>[.git]`
-pub(crate) fn parse_github_url(mut s: &str) -> Option<(&str, &str)> {
+pub(crate) fn parse_github_url(s: &str) -> Option<(&str, &str)> {
+    let mut parser = PullParser::new(s);
     let mut state = State::Start;
     let mut result: Option<(&str, &str)> = None;
     loop {
-        (s, state) = match state {
+        state = match state {
             State::Start => [
                 ("https://", State::Http),
                 ("http://", State::Http),
@@ -85,67 +86,101 @@ pub(crate) fn parse_github_url(mut s: &str) -> Option<(&str, &str)> {
                 ("ssh://git@github.com:", State::OwnerNameGit),
             ]
             .into_iter()
-            .find_map(|(token, transition)| s.strip_prefix(token).map(|t| (t, transition)))
-            .unwrap_or((s, State::Web)),
-            State::Http => match s.strip_prefix("api.github.com/repos/") {
-                Some(t) => (t, State::OwnerName),
-                None => (strip_user_pass(s), State::Web),
-            },
+            .find_map(|(token, transition)| parser.consume(token).and(Some(transition)))
+            .unwrap_or(State::Web),
+            State::Http => {
+                if parser.consume("api.github.com/repos/").is_some() {
+                    State::OwnerName
+                } else {
+                    parser.maybe_consume_userinfo();
+                    State::Web
+                }
+            }
             State::Web => {
-                s = strip_optional_prefix(s, "www.");
-                s = s.strip_prefix("github.com/")?;
-                let (owner, name, mut t) = split_owner_name(s)?;
+                parser.maybe_consume("www.");
+                parser.consume("github.com/")?;
+                let (owner, name) = parser.get_owner_name()?;
                 result = Some((owner, name));
-                t = strip_optional_prefix(t, ".git");
-                t = strip_optional_prefix(t, "/");
-                (t, State::End)
+                parser.maybe_consume(".git");
+                parser.maybe_consume("/");
+                State::End
             }
             State::OwnerName => {
-                let (owner, name, t) = split_owner_name(s)?;
+                let (owner, name) = parser.get_owner_name()?;
                 result = Some((owner, name));
-                (t, State::End)
+                State::End
             }
             State::OwnerNameGit => {
-                let (owner, name, t) = split_owner_name(s)?;
+                let (owner, name) = parser.get_owner_name()?;
                 result = Some((owner, name));
-                (strip_optional_prefix(t, ".git"), State::End)
+                parser.maybe_consume(".git");
+                State::End
             }
-            State::End => return if s.is_empty() { result } else { None },
+            State::End => return if parser.at_end() { result } else { None },
         }
     }
 }
 
-/// If `s` starts with a prefix of the form "`username@`" or
-/// "`username:password@`", return the part after the prefix; otherwise, return
-/// `s` unchanged.
-fn strip_user_pass(s: &str) -> &str {
-    // TODO: Compare against <https://datatracker.ietf.org/doc/html/rfc3986>
-    // (In particular, can the username or password be empty?)
-    let (username, rem) = span(s, is_userpass_char);
-    if username.is_empty() {
-        return s;
+struct PullParser<'a> {
+    data: &'a str,
+}
+
+impl<'a> PullParser<'a> {
+    fn new(data: &'a str) -> Self {
+        Self { data }
     }
-    let rem = match rem.strip_prefix(':') {
-        Some(rem) => {
-            let (password, rem) = span(rem, is_userpass_char);
-            if password.is_empty() {
-                return s;
+
+    fn consume(&mut self, s: &str) -> Option<()> {
+        match self.data.strip_prefix(s) {
+            Some(t) => {
+                self.data = t;
+                Some(())
             }
-            rem
+            None => None,
         }
-        None => rem,
-    };
-    rem.strip_prefix('@').unwrap_or(s)
+    }
+
+    fn maybe_consume(&mut self, s: &str) {
+        let _ = self.consume(s);
+    }
+
+    fn get_owner_name(&mut self) -> Option<(&'a str, &'a str)> {
+        let (owner, name, s) = split_owner_name(self.data)?;
+        self.data = s;
+        Some((owner, name))
+    }
+
+    /// If the current state starts with a prefix of the form "`username@`" or
+    /// "`username:password@`", consume it.
+    fn maybe_consume_userinfo(&mut self) {
+        // TODO: Compare against <https://datatracker.ietf.org/doc/html/rfc3986>
+        // (In particular, can the username or password be empty?)
+        let (username, rem) = span(self.data, is_userpass_char);
+        if username.is_empty() {
+            return;
+        }
+        let rem = match rem.strip_prefix(':') {
+            Some(rem) => {
+                let (password, rem) = span(rem, is_userpass_char);
+                if password.is_empty() {
+                    return;
+                }
+                rem
+            }
+            None => rem,
+        };
+        if let Some(rem) = rem.strip_prefix('@') {
+            self.data = rem;
+        }
+    }
+
+    fn at_end(&self) -> bool {
+        self.data.is_empty()
+    }
 }
 
 fn is_userpass_char(c: char) -> bool {
     c != '@' && c != ':' && c != '/'
-}
-
-/// If `s` starts with `prefix`, return the remainder of `s`; otherwise, return
-/// `s` unchanged.
-fn strip_optional_prefix<'a>(s: &'a str, prefix: &str) -> &'a str {
-    s.strip_prefix(prefix).unwrap_or(s)
 }
 
 #[cfg(test)]
