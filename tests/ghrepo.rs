@@ -113,12 +113,16 @@ fn test_bad_owner(#[case] owner: &str) {
 #[case("steven.git.txt")]
 #[case("steven.gitt")]
 #[case(".gitt")]
+#[case("..gitt")]
+#[case("...gitt")]
 #[case("git")]
 #[case("-")]
 #[case("_")]
 #[case("---")]
 #[case(".---")]
 #[case(".steven")]
+#[case("..steven")]
+#[case("...steven")]
 fn test_good_name(#[case] name: &str) {
     assert!(GHRepo::is_valid_name(name));
 }
@@ -155,9 +159,20 @@ fn test_bad_name(#[case] name: &str) {
     "jwodder",
     "headerparser"
 )]
+#[case(
+    "http://api.github.com/repos/jwodder/headerparser",
+    "jwodder",
+    "headerparser"
+)]
+#[case("api.github.com/repos/jwodder/headerparser", "jwodder", "headerparser")]
 #[case("https://github.com/jwodder/headerparser", "jwodder", "headerparser")]
 #[case(
     "https://github.com/jwodder/headerparser.git",
+    "jwodder",
+    "headerparser"
+)]
+#[case(
+    "https://github.com/jwodder/headerparser.git/",
     "jwodder",
     "headerparser"
 )]
@@ -174,6 +189,9 @@ fn test_bad_name(#[case] name: &str) {
     "headerparser"
 )]
 #[case("github.com/jwodder/headerparser", "jwodder", "headerparser")]
+#[case("github.com/jwodder/headerparser.git", "jwodder", "headerparser")]
+#[case("github.com/jwodder/headerparser.git/", "jwodder", "headerparser")]
+#[case("github.com/jwodder/headerparser/", "jwodder", "headerparser")]
 #[case("www.github.com/jwodder/headerparser", "jwodder", "headerparser")]
 #[case("https://github.com/jwodder/none.git", "jwodder", "none")]
 #[case(
@@ -201,6 +219,12 @@ fn repo_urls(#[case] url: &str, #[case] owner: &str, #[case] name: &str) {}
 #[case("https://api.github.com/repos/jwodder/headerparser.git")]
 #[case("https://api.github.com/repos/jwodder/headerparser.git/")]
 #[case("https://api.github.com/repos/jwodder/headerparser/")]
+#[case("my.username@github.com/octocat/Hello-World")]
+#[case("my.username@www.github.com/octocat/Hello-World")]
+#[case("my.username:hunter2@github.com/octocat/Hello-World")]
+#[case("my.username:hunter2@www.github.com/octocat/Hello-World")]
+#[case("ssh://git@github.com:jwodder/headerparser/")]
+#[case("git://github.com/jwodder/headerparser/")]
 fn bad_repos(#[case] url: &str) {}
 
 #[apply(repo_urls)]
