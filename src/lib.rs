@@ -27,8 +27,8 @@
 //! # }
 //! ```
 
-use fancy_regex::Regex;
-use lazy_static::lazy_static;
+mod parser;
+use crate::parser::{parse_github_url, split_name, split_owner, split_owner_name};
 use std::env;
 use std::error;
 use std::fmt;
@@ -36,42 +36,6 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
 use std::str::{self, FromStr};
-
-/// Regular expression for a valid GitHub username or organization name.
-///
-/// As of 2017-07-23, trying to sign up to GitHub with an invalid username or
-/// create an organization with an invalid name gives the message "Username may
-/// only contain alphanumeric characters or single hyphens, and cannot begin or
-/// end with a hyphen".  Additionally, trying to create a user named "none"
-/// (case insensitive) gives the message "Username name 'none' is a reserved
-/// word."
-///
-/// Unfortunately, there are a number of users who made accounts before the
-/// current name restrictions were put in place, and so this regex also needs
-/// to accept names that contain underscores, contain multiple consecutive
-/// hyphens, begin with a hyphen, and/or end with a hyphen.
-///
-/// Note that this regex requires an engine with lookaround support, such as
-/// [`fancy-regex`](https://crates.io/crates/fancy-regex).
-pub const GH_OWNER_RGX: &str = r"(?![Nn][Oo][Nn][Ee]($|[^-_A-Za-z0-9]))[-_A-Za-z0-9]+";
-
-/// Regular expression for a valid GitHub repository name.
-///
-/// Testing as of 2017-05-21 indicates that repository names can be composed of
-/// alphanumeric ASCII characters, hyphens, periods, and/or underscores, with
-/// the names `.` and `..` being reserved and names ending with `.git` (case
-/// insensitive) forbidden.
-///
-/// Note that this regex requires an engine with lookaround support, such as
-/// [`fancy-regex`](https://crates.io/crates/fancy-regex).
-pub const GH_NAME_RGX: &str =
-    r"(?:\.?[-A-Za-z0-9_][-A-Za-z0-9_.]*|\.\.[-A-Za-z0-9_.]+)(?<!\.[Gg][Ii][Tt])";
-
-lazy_static! {
-    /// Convenience regular expression for `<owner>/<name>`, including named
-    /// capturing groups
-    static ref OWNER_NAME: String = format!(r"(?P<owner>{})/(?P<name>{})", GH_OWNER_RGX, GH_NAME_RGX);
-}
 
 /// Error returned when trying to construct a [`GHRepo`] with invalid arguments
 /// or parse an invalid repository spec
@@ -148,10 +112,20 @@ impl GHRepo {
     /// Test whether a string is a valid GitHub user login or organization
     /// name.
     ///
-    /// Note that the restrictions on GitHub usernames have changed over time,
-    /// and this function endeavors to accept all usernames that were valid at
-    /// any point, so just because a name is accepted doesn't necessarily mean
-    /// you can create a user by that name on GitHub today.
+    /// As of 2017-07-23, trying to sign up to GitHub with an invalid username
+    /// or create an organization with an invalid name gives the message
+    /// "Username may only contain alphanumeric characters or single hyphens,
+    /// and cannot begin or end with a hyphen".  Additionally, trying to create
+    /// a user named "none" (case insensitive) gives the message "Username name
+    /// 'none' is a reserved word."  Unfortunately, there are a number of users
+    /// who made accounts before the current name restrictions were put in
+    /// place, and so this method also needs to accept names that contain
+    /// underscores, contain multiple consecutive hyphens, begin with a hyphen,
+    /// and/or end with a hyphen.
+    ///
+    /// As this function endeavors to accept all usernames that were valid at
+    /// any point, just because a name is accepted doesn't necessarily mean you
+    /// can create a user by that name on GitHub today.
     ///
     /// ```
     /// # use ghrepo::GHRepo;
@@ -162,15 +136,15 @@ impl GHRepo {
     /// assert!(!GHRepo::is_valid_owner("none"));
     /// ```
     pub fn is_valid_owner(s: &str) -> bool {
-        lazy_static! {
-            static ref RGX: Regex = Regex::new(&format!("^{GH_OWNER_RGX}$")).unwrap();
-        }
-        RGX.is_match(s).unwrap()
+        matches!(split_owner(s), Some((_, "")))
     }
 
     /// Test whether a string is a valid repository name.
     ///
-    /// Note that valid repository names do not include the ".git" suffix.
+    /// Testing as of 2017-05-21 indicates that repository names can be
+    /// composed of alphanumeric ASCII characters, hyphens, periods, and/or
+    /// underscores, with the names `.` and `..` being reserved and names
+    /// ending with `.git` (case insensitive) forbidden.
     ///
     /// ```
     /// # use ghrepo::GHRepo;
@@ -179,10 +153,7 @@ impl GHRepo {
     /// assert!(!GHRepo::is_valid_owner("octocat/my-repo"));
     /// ```
     pub fn is_valid_name(s: &str) -> bool {
-        lazy_static! {
-            static ref RGX: Regex = Regex::new(&format!("^{GH_NAME_RGX}$")).unwrap();
-        }
-        RGX.is_match(s).unwrap()
+        matches!(split_name(s), Some((_, "")))
     }
 
     /// Like [`GHRepo::from_str()`], except that if `s` is just a repository
@@ -267,40 +238,10 @@ impl GHRepo {
     /// Returns a [`ParseError`] if the given URL is not in one of the above
     /// formats
     pub fn from_url(s: &str) -> Result<Self, ParseError> {
-        lazy_static! {
-            static ref GITHUB_URL_CREGEXEN: [Regex; 4] = [
-                Regex::new(&format!(
-                    r"^(?:https?://(?:[^@:/]+(?::[^@/]+)?@)?)?(?:www\.)?github\.com/{}(?:\.git)?/?$",
-                    *OWNER_NAME,
-                ))
-                .unwrap(),
-                Regex::new(&format!(
-                    r"^(?:https?://)?api\.github\.com/repos/{}$",
-                    *OWNER_NAME
-                ))
-                .unwrap(),
-                Regex::new(
-                    &format!(r"^git://github\.com/{}(?:\.git)?$", *OWNER_NAME)
-                ).unwrap(),
-                Regex::new(&format!(
-                    r"^(?:ssh://)?git@github\.com:{}(?:\.git)?$",
-                    *OWNER_NAME
-                ))
-                .unwrap(),
-            ];
+        match parse_github_url(s) {
+            Some((owner, name)) => GHRepo::new(owner, name),
+            None => Err(ParseError::InvalidSpec(s.to_string())),
         }
-        for crgx in &*GITHUB_URL_CREGEXEN {
-            if let Some(caps) = crgx.captures(s).unwrap() {
-                return GHRepo::new(
-                    caps.name("owner").unwrap().as_str(),
-                    caps.name("name").unwrap().as_str(),
-                )
-                // Ensure the returned error reports the full string rather
-                // than just the bad segment
-                .map_err(|_| ParseError::InvalidSpec(s.to_string()));
-            }
-        }
-        Err(ParseError::InvalidSpec(s.to_string()))
     }
 }
 
@@ -322,19 +263,10 @@ impl FromStr for GHRepo {
     /// Returns a [`ParseError`] if `s` is not a valid URL or repository
     /// specifier
     fn from_str(s: &str) -> Result<Self, ParseError> {
-        lazy_static! {
-            static ref RGX: Regex = Regex::new(&format!("^{}$", *OWNER_NAME)).unwrap();
+        match split_owner_name(s) {
+            Some((owner, name, "")) => GHRepo::new(owner, name),
+            _ => GHRepo::from_url(s),
         }
-        if let Some(caps) = RGX.captures(s).unwrap() {
-            return GHRepo::new(
-                caps.name("owner").unwrap().as_str(),
-                caps.name("name").unwrap().as_str(),
-            )
-            // Ensure the returned error reports the full string rather than
-            // just the bad segment
-            .map_err(|_| ParseError::InvalidSpec(s.to_string()));
-        }
-        GHRepo::from_url(s)
     }
 }
 

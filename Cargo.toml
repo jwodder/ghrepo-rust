@@ -13,8 +13,6 @@ exclude = ["/.*"]
 
 [dependencies]
 clap = { version = "4.0.19", default-features = false, features = ["derive", "error-context", "help", "std", "suggestions", "usage", "wrap_help"] }
-fancy-regex = "0.10.0"
-lazy_static = "1.4.0"
 
 [dev-dependencies]
 rstest = { version = "0.15.0", default-features = false }

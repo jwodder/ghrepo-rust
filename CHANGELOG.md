@@ -5,7 +5,8 @@ v0.3.0 (in development)
 - Do not suppress stderr from executed Git commands (except for the command run
   by `LocalRepo::is_git_repo()`)
 - CLI: Do not emit a redundant error message when `git remote get-url` fails
-- Drop serde & serde-json dependencies
+- Drop serde, serde-json, fancy-regex, and lazy-static dependencies
+- Remove the `GH_OWNER_RGX` and `GH_NAME_RGX` constants
 
 v0.2.1 (2022-10-19)
 -------------------
