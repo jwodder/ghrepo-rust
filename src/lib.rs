@@ -228,8 +228,8 @@ impl GHRepo {
     /// Parse a GitHub repository URL.  The following URL formats are
     /// recognized:
     ///
-    /// - `[https://[<username>[:<password>]@]][www.]github.com/<owner>/<name>[.git][/]`
-    /// - `[https://]api.github.com/repos/<owner>/<name>`
+    /// - `[http[s]://[<username>[:<password>]@]][www.]github.com/<owner>/<name>[.git][/]`
+    /// - `[http[s]://]api.github.com/repos/<owner>/<name>`
     /// - `git://github.com/<owner>/<name>[.git]`
     /// - `[ssh://]git@github.com:<owner>/<name>[.git]`
     ///

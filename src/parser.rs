@@ -12,6 +12,8 @@ where
     }
 }
 
+/// If `s` starts with a valid GitHub owner (i.e., user or organization) name,
+/// return the owner and the remainder of `s`.
 pub(crate) fn split_owner(s: &str) -> Option<(&str, &str)> {
     let (owner, rem) = span(s, is_owner_char);
     if owner.is_empty() || owner.eq_ignore_ascii_case("none") {
@@ -25,6 +27,8 @@ fn is_owner_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '-' || c == '_'
 }
 
+/// If `s` starts with a valid GitHub repository name, return the name and the
+/// remainder of `s`.
 pub(crate) fn split_name(s: &str) -> Option<(&str, &str)> {
     let (name, rem) = span(s, is_name_char);
     let (name, rem) = match name.len().checked_sub(4) {
@@ -42,6 +46,9 @@ fn is_name_char(c: char) -> bool {
     c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.'
 }
 
+/// If `s` starts with a prefix of the form `OWNER/NAME`, where `OWNER` is a
+/// valid GitHub owner and `NAME` is a valid GitHub repository name, return the
+/// owner, the name, and the remainder of `s`.
 pub(crate) fn split_owner_name(s: &str) -> Option<(&str, &str, &str)> {
     let (owner, s) = split_owner(s)?;
     let s = s.strip_prefix('/')?;
@@ -59,6 +66,13 @@ enum State {
     End,
 }
 
+/// If `s` is a valid GitHub repository URL, return the repository owner &
+/// name.  The following URL formats are recognized:
+///
+/// - `[http[s]://[<username>[:<password>]@]][www.]github.com/<owner>/<name>[.git][/]`
+/// - `[http[s]://]api.github.com/repos/<owner>/<name>`
+/// - `git://github.com/<owner>/<name>[.git]`
+/// - `[ssh://]git@github.com:<owner>/<name>[.git]`
 pub(crate) fn parse_github_url(mut s: &str) -> Option<(&str, &str)> {
     let mut state = State::Start;
     let mut result: Option<(&str, &str)> = None;
@@ -103,9 +117,12 @@ pub(crate) fn parse_github_url(mut s: &str) -> Option<(&str, &str)> {
     }
 }
 
+/// If `s` starts with a prefix of the form "`username@`" or
+/// "`username:password@`", return the part after the prefix; otherwise, return
+/// `s` unchanged.
 fn strip_user_pass(s: &str) -> &str {
-    // TODO: Compare against RFCs (In particular, can the username or password
-    // be empty?)
+    // TODO: Compare against <https://datatracker.ietf.org/doc/html/rfc3986>
+    // (In particular, can the username or password be empty?)
     let (username, rem) = span(s, is_userpass_char);
     if username.is_empty() {
         return s;
@@ -127,6 +144,8 @@ fn is_userpass_char(c: char) -> bool {
     c != '@' && c != ':' && c != '/'
 }
 
+/// If `s` starts with `prefix`, return the remainder of `s`; otherwise, return
+/// `s` unchanged.
 fn strip_optional_prefix<'a>(s: &'a str, prefix: &str) -> &'a str {
     s.strip_prefix(prefix).unwrap_or(s)
 }
