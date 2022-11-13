@@ -225,6 +225,12 @@ mod tests {
     #[case("my.username:hunter2@github.com/octocat/Hello-World", None)]
     #[case("ssh://git@github.com:jwodder/headerparser/", None)]
     #[case("git://github.com/jwodder/headerparser/", None)]
+    #[case("https://http://github.com/joe-coder/hello.world", None)]
+    #[case(
+        "https://x-access-token:1234567890@api.github.com/repos/octocat/Hello-World",
+        None
+    )]
+    #[case("x-access-token:1234567890@github.com/octocat/Hello-World", None)]
     fn test_parse_github_url(#[case] s: &str, #[case] out: Option<(&str, &str)>) {
         assert_eq!(parse_github_url(s), out);
     }
