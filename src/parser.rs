@@ -70,7 +70,8 @@ enum State {
 /// - `[http[s]://[<username>[:<password>]@]][www.]github.com/<owner>/<name>[.git][/]`
 /// - `[http[s]://]api.github.com/repos/<owner>/<name>`
 /// - `git://github.com/<owner>/<name>[.git]`
-/// - `[ssh://]git@github.com:<owner>/<name>[.git]`
+/// - `git@github.com:<owner>/<name>[.git]`
+/// - `ssh://git@github.com/<owner>/<name>[.git]`
 pub(crate) fn parse_github_url(s: &str) -> Option<(&str, &str)> {
     let mut parser = PullParser::new(s);
     let mut state = State::Start;
@@ -83,7 +84,7 @@ pub(crate) fn parse_github_url(s: &str) -> Option<(&str, &str)> {
                 ("api.github.com/repos/", State::OwnerName),
                 ("git://github.com/", State::OwnerNameGit),
                 ("git@github.com:", State::OwnerNameGit),
-                ("ssh://git@github.com:", State::OwnerNameGit),
+                ("ssh://git@github.com/", State::OwnerNameGit),
             ]
             .into_iter()
             .find_map(|(token, transition)| parser.consume(token).and(Some(transition)))
@@ -230,9 +231,10 @@ mod tests {
     #[rstest]
     #[case("git://github.com/jwodder/headerparser", Some(("jwodder", "headerparser")))]
     #[case("git@github.com:joe-q-coder/my.repo.git", Some(("joe-q-coder", "my.repo")))]
+    #[case("git@github.com/joe-q-coder/my.repo.git", None)]
     #[case("https://github.com/joe.coder/hello-world", None)]
     #[case("https://github.com/joe-coder/hello.world", Some(("joe-coder", "hello.world")))]
-    #[case("ssh://git@github.com:-/test", Some(("-", "test")))]
+    #[case("ssh://git@github.com/-/test", Some(("-", "test")))]
     #[case("https://api.github.com/repos/none-/-none", Some(("none-", "-none")))]
     #[case("api.github.com/repos/jwodder/headerparser", Some(("jwodder", "headerparser")))]
     #[case("https://github.com/-Jerry-/geshi-1.0.git", Some(("-Jerry-", "geshi-1.0")))]
@@ -247,7 +249,9 @@ mod tests {
     #[case("https://api.github.com/repos/jwodder/headerparser/", None)]
     #[case("my.username@www.github.com/octocat/Hello-World", None)]
     #[case("my.username:hunter2@github.com/octocat/Hello-World", None)]
+    #[case("ssh://git@github.com:jwodder/headerparser", None)]
     #[case("ssh://git@github.com:jwodder/headerparser/", None)]
+    #[case("ssh://git@github.com/jwodder/headerparser/", None)]
     #[case("git://github.com/jwodder/headerparser/", None)]
     #[case("https://http://github.com/joe-coder/hello.world", None)]
     #[case(

@@ -9,6 +9,8 @@ v0.3.0 (in development)
 - Remove the `GH_OWNER_RGX` and `GH_NAME_RGX` constants
 - Properly follow RFC 3986 when parsing username & password fields in
   `www.github.com` URLs
+- Correct the accepted format for URLs that start with `ssh://` (They need to
+  separate the hostname from the path with a slash rather than a colon)
 
 v0.2.1 (2022-10-19)
 -------------------

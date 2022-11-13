@@ -231,7 +231,8 @@ impl GHRepo {
     /// - `[http[s]://[<username>[:<password>]@]][www.]github.com/<owner>/<name>[.git][/]`
     /// - `[http[s]://]api.github.com/repos/<owner>/<name>`
     /// - `git://github.com/<owner>/<name>[.git]`
-    /// - `[ssh://]git@github.com:<owner>/<name>[.git]`
+    /// - `git@github.com:<owner>/<name>[.git]`
+    /// - `ssh://git@github.com/<owner>/<name>[.git]`
     ///
     /// # Errors
     ///

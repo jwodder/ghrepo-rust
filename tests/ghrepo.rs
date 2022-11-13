@@ -148,9 +148,9 @@ fn test_bad_name(#[case] name: &str) {
 #[case("git://github.com/jwodder/headerparser.git", "jwodder", "headerparser")]
 #[case("git@github.com:jwodder/headerparser", "jwodder", "headerparser")]
 #[case("git@github.com:jwodder/headerparser.git", "jwodder", "headerparser")]
-#[case("ssh://git@github.com:jwodder/headerparser", "jwodder", "headerparser")]
+#[case("ssh://git@github.com/jwodder/headerparser", "jwodder", "headerparser")]
 #[case(
-    "ssh://git@github.com:jwodder/headerparser.git",
+    "ssh://git@github.com/jwodder/headerparser.git",
     "jwodder",
     "headerparser"
 )]
@@ -223,7 +223,10 @@ fn repo_urls(#[case] url: &str, #[case] owner: &str, #[case] name: &str) {}
 #[case("my.username@www.github.com/octocat/Hello-World")]
 #[case("my.username:hunter2@github.com/octocat/Hello-World")]
 #[case("my.username:hunter2@www.github.com/octocat/Hello-World")]
+#[case("git@github.com/jwodder/headerparser")]
+#[case("ssh://git@github.com:jwodder/headerparser")]
 #[case("ssh://git@github.com:jwodder/headerparser/")]
+#[case("ssh://git@github.com/jwodder/headerparser/")]
 #[case("git://github.com/jwodder/headerparser/")]
 fn bad_repos(#[case] url: &str) {}
 
