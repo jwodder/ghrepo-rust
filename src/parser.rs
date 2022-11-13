@@ -150,27 +150,14 @@ impl<'a> PullParser<'a> {
         Some((owner, name))
     }
 
-    /// If the current state starts with a prefix of the form "`username@`" or
-    /// "`username:password@`", consume it.
+    /// If the current state starts with a (possibly empty) URL userinfo field
+    /// followed by a `@`, consume them both.
     fn maybe_consume_userinfo(&mut self) {
-        // TODO: Compare against <https://datatracker.ietf.org/doc/html/rfc3986>
-        // (In particular, can the username or password be empty?)
-        let (username, rem) = span(self.data, is_userpass_char);
-        if username.is_empty() {
-            return;
-        }
-        let rem = match rem.strip_prefix(':') {
-            Some(rem) => {
-                let (password, rem) = span(rem, is_userpass_char);
-                if password.is_empty() {
-                    return;
-                }
-                rem
+        // cf. <https://datatracker.ietf.org/doc/html/rfc3986#section-3.2.1>
+        if let Some((userinfo, s)) = self.data.split_once('@') {
+            if userinfo.chars().all(is_userinfo_char) {
+                self.data = s;
             }
-            None => rem,
-        };
-        if let Some(rem) = rem.strip_prefix('@') {
-            self.data = rem;
         }
     }
 
@@ -179,8 +166,10 @@ impl<'a> PullParser<'a> {
     }
 }
 
-fn is_userpass_char(c: char) -> bool {
-    c != '@' && c != ':' && c != '/'
+fn is_userinfo_char(c: char) -> bool {
+    // RFC 3986 requires that percent signs be followed by two hex digits, but
+    // we're not going to bother enforcing that.
+    c.is_ascii_alphanumeric() || "-._~!$&'()*+,;=%:".contains(c)
 }
 
 #[cfg(test)]
@@ -266,6 +255,17 @@ mod tests {
         None
     )]
     #[case("x-access-token:1234567890@github.com/octocat/Hello-World", None)]
+    #[case("https://user name@github.com/octocat/Hello-World", None)]
+    #[case("https://user/name@github.com/octocat/Hello-World", None)]
+    #[case("https://user@name@github.com/octocat/Hello-World", None)]
+    #[case("https://user%20name@github.com/octocat/Hello-World", Some(("octocat", "Hello-World")))]
+    #[case("https://user+name@github.com/octocat/Hello-World", Some(("octocat", "Hello-World")))]
+    #[case("https://~user.name@github.com/octocat/Hello-World", Some(("octocat", "Hello-World")))]
+    #[case("https://@github.com/octocat/Hello-World", Some(("octocat", "Hello-World")))]
+    #[case("https://user:@github.com/octocat/Hello-World", Some(("octocat", "Hello-World")))]
+    #[case("https://:pass@github.com/octocat/Hello-World", Some(("octocat", "Hello-World")))]
+    #[case("https://:@github.com/octocat/Hello-World", Some(("octocat", "Hello-World")))]
+    #[case("https://user:pass:extra@github.com/octocat/Hello-World", Some(("octocat", "Hello-World")))]
     fn test_parse_github_url(#[case] s: &str, #[case] out: Option<(&str, &str)>) {
         assert_eq!(parse_github_url(s), out);
     }
