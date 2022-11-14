@@ -23,6 +23,7 @@ fn main() {
     match run(&args) {
         Ok(s) => println!("{}", s),
         Err(LocalRepoError::CommandFailed(rc)) => exit(rc.code().unwrap_or(1)),
+        Err(LocalRepoError::NoSuchRemote(_)) => exit(2),
         Err(e) => {
             eprintln!("ghrepo: {}", e);
             exit(1);
