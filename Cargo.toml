@@ -12,7 +12,7 @@ categories = ["command-line-utilities"]
 exclude = ["/.*"]
 
 [dependencies]
-clap = { version = "4.0.23", default-features = false, features = ["derive", "error-context", "help", "std", "suggestions", "usage", "wrap_help"] }
+lexopt = "0.2.1"
 
 [dev-dependencies]
 rstest = { version = "0.15.0", default-features = false }

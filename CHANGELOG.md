@@ -12,6 +12,7 @@ v0.3.0 (in development)
 - Correct the accepted format for URLs that start with `ssh://` (They need to
   separate the hostname from the path with a slash rather than a colon)
 - Schemes & hostnames in URLs are now parsed case-insensitively
+- Switch from clap to lexopt
 
 v0.2.1 (2022-10-19)
 -------------------
