@@ -45,6 +45,21 @@ fn test_run_json() {
 }
 
 #[test]
+fn test_run_remote() {
+    if which("git").is_err() {
+        return;
+    }
+    let origin = GHRepo::new("octocat", "repository").unwrap();
+    let upstream = GHRepo::new("sourcedog", "repository").unwrap();
+    let maker = RepoMaker::new();
+    maker.init("trunk");
+    maker.add_remote("origin", &origin.ssh_url());
+    maker.add_remote("upstream", &upstream.clone_url());
+    let out = readcmd(&["--remote", "upstream", maker.path().to_str().unwrap()]);
+    assert_eq!(out, "sourcedog/repository");
+}
+
+#[test]
 fn test_run_empty() {
     if which("git").is_err() {
         return;
