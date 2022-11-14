@@ -287,6 +287,7 @@ fn repo_urls(#[case] url: &str, #[case] owner: &str, #[case] name: &str) {}
 #[case("https://x-access-token:1234567890@api.github.com/repos/octocat/Hello-World")]
 #[case("x-access-token:1234567890@github.com/octocat/Hello-World")]
 #[case("git@github.com/jwodder/headerparser")]
+#[case("git@GITHUB.com:joe-q-coder/my.repo.GIT")]
 #[case("GIT@github.com:joe-q-coder/my.repo.git")]
 #[case("git@github.com/joe-q-coder/my.repo.git")]
 #[case("ssh://git@github.com:jwodder/headerparser")]
@@ -296,6 +297,7 @@ fn repo_urls(#[case] url: &str, #[case] owner: &str, #[case] name: &str) {}
 #[case("SSH://Git@GITHUB.COM/-/test")]
 #[case("ssh://GIT@github.com/-/test")]
 #[case("https://http://github.com/joe-coder/hello.world")]
+#[case("https://github.com/-Jerry-/geshi-1.0.Git")]
 fn bad_repos(#[case] url: &str) {}
 
 #[apply(repo_urls)]
