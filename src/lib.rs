@@ -306,10 +306,10 @@ impl LocalRepo {
     ///
     /// # Errors
     ///
-    /// Returns failures from [`std::env::current_dir()`]
-    pub fn for_cwd() -> Result<Self, io::Error> {
+    /// Returns a [`LocalRepoError`] if [`std::env::current_dir()`] failed
+    pub fn for_cwd() -> Result<Self, LocalRepoError> {
         Ok(LocalRepo {
-            path: env::current_dir()?,
+            path: env::current_dir().map_err(LocalRepoError::CurdirError)?,
         })
     }
 
@@ -331,7 +331,8 @@ impl LocalRepo {
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .current_dir(&self.path)
-            .status()?
+            .status()
+            .map_err(LocalRepoError::CouldNotExecute)?
             .success())
     }
 
@@ -342,7 +343,8 @@ impl LocalRepo {
             .args(args)
             .current_dir(&self.path)
             .stderr(Stdio::inherit())
-            .output()?;
+            .output()
+            .map_err(LocalRepoError::CouldNotExecute)?;
         if out.status.success() {
             Ok(str::from_utf8(&out.stdout)?.trim().to_string())
         } else {
@@ -414,6 +416,10 @@ pub enum LocalRepoError {
     /// Returned when the Git command returned nonzero
     CommandFailed(ExitStatus),
 
+    /// Returned by [`LocalRepo::for_cwd()`] if [`std::env::current_dir()`]
+    /// errored
+    CurdirError(io::Error),
+
     /// Returned by [`LocalRepo::current_branch()`] if the repository is in a
     /// detached `HEAD` state
     DetachedHead,
@@ -444,6 +450,9 @@ impl fmt::Display for LocalRepoError {
             LocalRepoError::CommandFailed(r) => {
                 write!(f, "Git command exited unsuccessfully: {}", r)
             }
+            LocalRepoError::CurdirError(e) => {
+                write!(f, "Could not determine current directory: {}", e)
+            }
             LocalRepoError::DetachedHead => {
                 write!(f, "Git repository is in a detached HEAD state")
             }
@@ -472,18 +481,13 @@ impl error::Error for LocalRepoError {
         match self {
             LocalRepoError::CouldNotExecute(e) => Some(e),
             LocalRepoError::CommandFailed(_) => None,
+            LocalRepoError::CurdirError(e) => Some(e),
             LocalRepoError::DetachedHead => None,
             LocalRepoError::NoSuchRemote(_) => None,
             LocalRepoError::NoUpstream(_) => None,
             LocalRepoError::InvalidUtf8(e) => Some(e),
             LocalRepoError::InvalidRemoteURL(e) => Some(e),
         }
-    }
-}
-
-impl From<io::Error> for LocalRepoError {
-    fn from(e: io::Error) -> LocalRepoError {
-        LocalRepoError::CouldNotExecute(e)
     }
 }
 

@@ -13,6 +13,8 @@ v0.3.0 (in development)
   separate the hostname from the path with a slash rather than a colon)
 - Schemes & hostnames in URLs are now parsed case-insensitively
 - Switch from clap to lexopt
+- `LocalRepo::for_cwd()` now returns a new dedicated variant of
+  `LocalRepoError` if the call to `std::env::current_dir()` fails
 
 v0.2.1 (2022-10-19)
 -------------------

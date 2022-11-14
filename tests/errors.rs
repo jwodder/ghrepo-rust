@@ -35,6 +35,18 @@ fn test_display_local_repo_error_could_not_execute() {
 }
 
 #[test]
+fn test_display_local_repo_error_curdir() {
+    let e = LocalRepoError::CurdirError(Error::from(ErrorKind::NotFound));
+    assert_eq!(
+        e.to_string(),
+        format!(
+            "Could not determine current directory: {}",
+            Error::from(ErrorKind::NotFound)
+        )
+    );
+}
+
+#[test]
 fn test_display_local_repo_error_detached_head() {
     let e = LocalRepoError::DetachedHead;
     assert_eq!(e.to_string(), "Git repository is in a detached HEAD state");
