@@ -148,12 +148,17 @@ fn test_bad_name(#[case] name: &str) {
 #[case("git://github.com/jwodder/headerparser.git", "jwodder", "headerparser")]
 #[case("git@github.com:jwodder/headerparser", "jwodder", "headerparser")]
 #[case("git@github.com:jwodder/headerparser.git", "jwodder", "headerparser")]
+#[case("GIT://GitHub.COM/jwodder/headerparser", "jwodder", "headerparser")]
+#[case("git@github.com:joe-q-coder/my.repo.git", "joe-q-coder", "my.repo")]
+#[case("git@GITHUB.com:joe-q-coder/my.repo.git", "joe-q-coder", "my.repo")]
 #[case("ssh://git@github.com/jwodder/headerparser", "jwodder", "headerparser")]
 #[case(
     "ssh://git@github.com/jwodder/headerparser.git",
     "jwodder",
     "headerparser"
 )]
+#[case("ssh://git@github.com/-/test", "-", "test")]
+#[case("SSH://git@GITHUB.COM/-/test", "-", "test")]
 #[case(
     "https://api.github.com/repos/jwodder/headerparser",
     "jwodder",
@@ -165,6 +170,11 @@ fn test_bad_name(#[case] name: &str) {
     "headerparser"
 )]
 #[case("api.github.com/repos/jwodder/headerparser", "jwodder", "headerparser")]
+#[case("https://api.github.com/repos/none-/-none", "none-", "-none")]
+#[case("HttpS://api.github.com/repos/none-/-none", "none-", "-none")]
+#[case("http://api.github.com/repos/none-/-none", "none-", "-none")]
+#[case("Http://api.github.com/repos/none-/-none", "none-", "-none")]
+#[case("Api.GitHub.Com/repos/jwodder/headerparser", "jwodder", "headerparser")]
 #[case("https://github.com/jwodder/headerparser", "jwodder", "headerparser")]
 #[case(
     "https://github.com/jwodder/headerparser.git",
@@ -194,6 +204,19 @@ fn test_bad_name(#[case] name: &str) {
 #[case("github.com/jwodder/headerparser/", "jwodder", "headerparser")]
 #[case("www.github.com/jwodder/headerparser", "jwodder", "headerparser")]
 #[case("https://github.com/jwodder/none.git", "jwodder", "none")]
+#[case("https://github.com/joe-coder/hello.world", "joe-coder", "hello.world")]
+#[case("http://github.com/joe-coder/hello.world", "joe-coder", "hello.world")]
+#[case("HTTPS://GITHUB.COM/joe-coder/hello.world", "joe-coder", "hello.world")]
+#[case(
+    "HTTPS://WWW.GITHUB.COM/joe-coder/hello.world",
+    "joe-coder",
+    "hello.world"
+)]
+#[case("https://github.com/-Jerry-/geshi-1.0.git", "-Jerry-", "geshi-1.0")]
+#[case("https://github.com/-Jerry-/geshi-1.0.git/", "-Jerry-", "geshi-1.0")]
+#[case("https://github.com/-Jerry-/geshi-1.0/", "-Jerry-", "geshi-1.0")]
+#[case("https://www.github.com/-Jerry-/geshi-1.0", "-Jerry-", "geshi-1.0")]
+#[case("github.com/-Jerry-/geshi-1.0", "-Jerry-", "geshi-1.0")]
 #[case(
     "https://x-access-token:1234567890@github.com/octocat/Hello-World",
     "octocat",
@@ -204,11 +227,44 @@ fn test_bad_name(#[case] name: &str) {
     "octocat",
     "Hello-World"
 )]
+#[case(
+    "https://user%20name@github.com/octocat/Hello-World",
+    "octocat",
+    "Hello-World"
+)]
+#[case(
+    "https://user+name@github.com/octocat/Hello-World",
+    "octocat",
+    "Hello-World"
+)]
+#[case(
+    "https://~user.name@github.com/octocat/Hello-World",
+    "octocat",
+    "Hello-World"
+)]
+#[case("https://@github.com/octocat/Hello-World", "octocat", "Hello-World")]
+#[case(
+    "https://user:@github.com/octocat/Hello-World",
+    "octocat",
+    "Hello-World"
+)]
+#[case(
+    "https://:pass@github.com/octocat/Hello-World",
+    "octocat",
+    "Hello-World"
+)]
+#[case("https://:@github.com/octocat/Hello-World", "octocat", "Hello-World")]
+#[case(
+    "https://user:pass:extra@github.com/octocat/Hello-World",
+    "octocat",
+    "Hello-World"
+)]
 fn repo_urls(#[case] url: &str, #[case] owner: &str, #[case] name: &str) {}
 
 #[template]
 #[rstest]
 #[case("https://github.com/none/headerparser.git")]
+#[case("https://github.com/joe.coder/hello-world")]
 #[case("/repo")]
 #[case("none/repo")]
 #[case("jwodder/headerparser.git")]
@@ -219,15 +275,27 @@ fn repo_urls(#[case] url: &str, #[case] owner: &str, #[case] name: &str) {}
 #[case("https://api.github.com/repos/jwodder/headerparser.git")]
 #[case("https://api.github.com/repos/jwodder/headerparser.git/")]
 #[case("https://api.github.com/repos/jwodder/headerparser/")]
+#[case("api.github.com/REPOS/jwodder/headerparser")]
+#[case("https://api.github.com/REPOS/jwodder/headerparser")]
+#[case("https://user name@github.com/octocat/Hello-World")]
+#[case("https://user/name@github.com/octocat/Hello-World")]
+#[case("https://user@name@github.com/octocat/Hello-World")]
 #[case("my.username@github.com/octocat/Hello-World")]
 #[case("my.username@www.github.com/octocat/Hello-World")]
 #[case("my.username:hunter2@github.com/octocat/Hello-World")]
 #[case("my.username:hunter2@www.github.com/octocat/Hello-World")]
+#[case("https://x-access-token:1234567890@api.github.com/repos/octocat/Hello-World")]
+#[case("x-access-token:1234567890@github.com/octocat/Hello-World")]
 #[case("git@github.com/jwodder/headerparser")]
+#[case("GIT@github.com:joe-q-coder/my.repo.git")]
+#[case("git@github.com/joe-q-coder/my.repo.git")]
 #[case("ssh://git@github.com:jwodder/headerparser")]
 #[case("ssh://git@github.com:jwodder/headerparser/")]
 #[case("ssh://git@github.com/jwodder/headerparser/")]
 #[case("git://github.com/jwodder/headerparser/")]
+#[case("SSH://Git@GITHUB.COM/-/test")]
+#[case("ssh://GIT@github.com/-/test")]
+#[case("https://http://github.com/joe-coder/hello.world")]
 fn bad_repos(#[case] url: &str) {}
 
 #[apply(repo_urls)]
