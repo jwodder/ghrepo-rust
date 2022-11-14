@@ -64,6 +64,20 @@ enum State {
     End,
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+enum Token {
+    /// A string to match exactly
+    Literal(&'static str),
+    /// A string to match regardless of differences in ASCII case
+    CaseFold(&'static str),
+}
+
+impl From<&'static str> for Token {
+    fn from(s: &'static str) -> Token {
+        Token::Literal(s)
+    }
+}
+
 /// If `s` is a valid GitHub repository URL, return the repository owner &
 /// name.  The following URL formats are recognized:
 ///
@@ -73,24 +87,55 @@ enum State {
 /// - `git@github.com:<owner>/<name>[.git]`
 /// - `ssh://git@github.com/<owner>/<name>[.git]`
 pub(crate) fn parse_github_url(s: &str) -> Option<(&str, &str)> {
+    // Notes on case sensitivity:
+    // - Schemes & hostnames in URLs are case insensitive per RFC 3986 (though
+    //   `git clone` as of Git 2.38.1 doesn't actually accept non-lowercase
+    //   schemes).
+    // - The "repos" in an API URL is case sensitive; changing the case results
+    //   in a 404.
+    // - The "git" username in SSH URLs (both forms) is case sensitive;
+    //   changing the case results in a permissions error.
+    // - The optional ".git" suffix is case sensitive; changing the case (when
+    //   cloning with `git clone`, at least) results in either a credentials
+    //   prompt for HTTPS URLs (the same as if you'd specified a nonexistent
+    //   repo) or a "repository not found" message for SSH URLs.
     let mut parser = PullParser::new(s);
     let mut state = State::Start;
     let mut result: Option<(&str, &str)> = None;
     loop {
         state = match state {
             State::Start => [
-                ("https://", State::Http),
-                ("http://", State::Http),
-                ("api.github.com/repos/", State::OwnerName),
-                ("git://github.com/", State::OwnerNameGit),
-                ("git@github.com:", State::OwnerNameGit),
-                ("ssh://git@github.com/", State::OwnerNameGit),
+                (vec![Token::CaseFold("https://")], State::Http),
+                (vec![Token::CaseFold("http://")], State::Http),
+                (
+                    vec![Token::CaseFold("api.github.com"), "/repos/".into()],
+                    State::OwnerName,
+                ),
+                (
+                    vec![Token::CaseFold("git://github.com/")],
+                    State::OwnerNameGit,
+                ),
+                (
+                    vec!["git@".into(), Token::CaseFold("github.com:")],
+                    State::OwnerNameGit,
+                ),
+                (
+                    vec![
+                        Token::CaseFold("ssh://"),
+                        "git@".into(),
+                        Token::CaseFold("github.com/"),
+                    ],
+                    State::OwnerNameGit,
+                ),
             ]
             .into_iter()
-            .find_map(|(token, transition)| parser.consume(token).and(Some(transition)))
+            .find_map(|(token, transition)| parser.consume_seq(token).and(Some(transition)))
             .unwrap_or(State::Web),
             State::Http => {
-                if parser.consume("api.github.com/repos/").is_some() {
+                if parser
+                    .consume_seq([Token::CaseFold("api.github.com"), "/repos/".into()])
+                    .is_some()
+                {
                     State::OwnerName
                 } else {
                     parser.maybe_consume_userinfo();
@@ -98,23 +143,20 @@ pub(crate) fn parse_github_url(s: &str) -> Option<(&str, &str)> {
                 }
             }
             State::Web => {
-                parser.maybe_consume("www.");
-                parser.consume("github.com/")?;
-                let (owner, name) = parser.get_owner_name()?;
-                result = Some((owner, name));
-                parser.maybe_consume(".git");
-                parser.maybe_consume("/");
+                parser.maybe_consume(Token::CaseFold("www."));
+                parser.consume(Token::CaseFold("github.com/"))?;
+                result = Some(parser.get_owner_name()?);
+                parser.maybe_consume(".git".into());
+                parser.maybe_consume("/".into());
                 State::End
             }
             State::OwnerName => {
-                let (owner, name) = parser.get_owner_name()?;
-                result = Some((owner, name));
+                result = Some(parser.get_owner_name()?);
                 State::End
             }
             State::OwnerNameGit => {
-                let (owner, name) = parser.get_owner_name()?;
-                result = Some((owner, name));
-                parser.maybe_consume(".git");
+                result = Some(parser.get_owner_name()?);
+                parser.maybe_consume(".git".into());
                 State::End
             }
             State::End => return if parser.at_end() { result } else { None },
@@ -131,18 +173,44 @@ impl<'a> PullParser<'a> {
         Self { data }
     }
 
-    fn consume(&mut self, s: &str) -> Option<()> {
-        match self.data.strip_prefix(s) {
-            Some(t) => {
-                self.data = t;
-                Some(())
+    fn consume_seq<I>(&mut self, tokens: I) -> Option<()>
+    where
+        I: IntoIterator<Item = Token>,
+    {
+        let orig = self.data;
+        for t in tokens.into_iter() {
+            if self.consume(t).is_none() {
+                self.data = orig;
+                return None;
             }
-            None => None,
+        }
+        Some(())
+    }
+
+    fn consume(&mut self, token: Token) -> Option<()> {
+        match token {
+            Token::Literal(s) => match self.data.strip_prefix(s) {
+                Some(t) => {
+                    self.data = t;
+                    Some(())
+                }
+                None => None,
+            },
+            Token::CaseFold(s) => {
+                let i = s.len();
+                match self.data.get(..i).zip(self.data.get(i..)) {
+                    Some((t, u)) if t.eq_ignore_ascii_case(s) => {
+                        self.data = u;
+                        Some(())
+                    }
+                    _ => None,
+                }
+            }
         }
     }
 
-    fn maybe_consume(&mut self, s: &str) {
-        let _ = self.consume(s);
+    fn maybe_consume(&mut self, token: Token) {
+        let _ = self.consume(token);
     }
 
     fn get_owner_name(&mut self) -> Option<(&'a str, &'a str)> {
@@ -229,14 +297,62 @@ mod tests {
     }
 
     #[rstest]
+    #[case("foobar", "foo".into(), Some(()), "bar")]
+    #[case("FOObar", "foo".into(), None, "FOObar")]
+    #[case("FOObar", Token::CaseFold("foo"), Some(()), "bar")]
+    #[case("Pokémon", Token::CaseFold("poké"), Some(()), "mon")]
+    #[case("PokÉmon", Token::CaseFold("poké"), None, "PokÉmon")]
+    #[case("Pokémon", Token::CaseFold("poke"), None, "Pokémon")]
+    #[case("foo", Token::CaseFold("foobar"), None, "foo")]
+    #[case("foo", Token::CaseFold("FOO"), Some(()), "")]
+    fn test_consume(
+        #[case] start: &str,
+        #[case] token: Token,
+        #[case] out: Option<()>,
+        #[case] end: &str,
+    ) {
+        let mut parser = PullParser::new(start);
+        assert_eq!(parser.consume(token), out);
+        assert_eq!(parser.data, end);
+    }
+
+    #[rstest]
+    #[case("FOOBar", vec![Token::CaseFold("foo"), "bar".into()], None, "FOOBar")]
+    #[case("FOOBar", vec![Token::CaseFold("foo"), Token::CaseFold("bar")], Some(()), "")]
+    fn test_consume_seq(
+        #[case] start: &str,
+        #[case] tokens: Vec<Token>,
+        #[case] out: Option<()>,
+        #[case] end: &str,
+    ) {
+        let mut parser = PullParser::new(start);
+        assert_eq!(parser.consume_seq(tokens), out);
+        assert_eq!(parser.data, end);
+    }
+
+    #[rstest]
     #[case("git://github.com/jwodder/headerparser", Some(("jwodder", "headerparser")))]
+    #[case("GIT://GitHub.COM/jwodder/headerparser", Some(("jwodder", "headerparser")))]
     #[case("git@github.com:joe-q-coder/my.repo.git", Some(("joe-q-coder", "my.repo")))]
+    #[case("git@GITHUB.com:joe-q-coder/my.repo.git", Some(("joe-q-coder", "my.repo")))]
+    #[case("GIT@github.com:joe-q-coder/my.repo.git", None)]
     #[case("git@github.com/joe-q-coder/my.repo.git", None)]
     #[case("https://github.com/joe.coder/hello-world", None)]
     #[case("https://github.com/joe-coder/hello.world", Some(("joe-coder", "hello.world")))]
+    #[case("http://github.com/joe-coder/hello.world", Some(("joe-coder", "hello.world")))]
+    #[case("HTTPS://GITHUB.COM/joe-coder/hello.world", Some(("joe-coder", "hello.world")))]
+    #[case("HTTPS://WWW.GITHUB.COM/joe-coder/hello.world", Some(("joe-coder", "hello.world")))]
     #[case("ssh://git@github.com/-/test", Some(("-", "test")))]
+    #[case("SSH://git@GITHUB.COM/-/test", Some(("-", "test")))]
+    #[case("SSH://Git@GITHUB.COM/-/test", None)]
+    #[case("ssh://GIT@github.com/-/test", None)]
     #[case("https://api.github.com/repos/none-/-none", Some(("none-", "-none")))]
+    #[case("HttpS://api.github.com/repos/none-/-none", Some(("none-", "-none")))]
+    #[case("http://api.github.com/repos/none-/-none", Some(("none-", "-none")))]
+    #[case("Http://api.github.com/repos/none-/-none", Some(("none-", "-none")))]
     #[case("api.github.com/repos/jwodder/headerparser", Some(("jwodder", "headerparser")))]
+    #[case("api.github.com/REPOS/jwodder/headerparser", None)]
+    #[case("Api.GitHub.Com/repos/jwodder/headerparser", Some(("jwodder", "headerparser")))]
     #[case("https://github.com/-Jerry-/geshi-1.0.git", Some(("-Jerry-", "geshi-1.0")))]
     #[case("https://github.com/-Jerry-/geshi-1.0.git/", Some(("-Jerry-", "geshi-1.0")))]
     #[case("https://github.com/-Jerry-/geshi-1.0/", Some(("-Jerry-", "geshi-1.0")))]
