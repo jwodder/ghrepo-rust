@@ -1,5 +1,5 @@
-v0.3.0 (in development)
------------------------
+v0.3.0 (2022-11-15)
+-------------------
 - Adjust `Display` format of `LocalRepoError::CommandFailed` to use the std
   `ExitStatus` Display
 - Do not suppress stderr from executed Git commands (except for the command run
