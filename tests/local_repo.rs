@@ -127,7 +127,7 @@ fn test_github_remote() {
     let repo = GHRepo::new("octocat", "repository").unwrap();
     let maker = RepoMaker::new();
     maker.init("trunk");
-    maker.add_remote("origin", &repo.ssh_url());
+    maker.add_remote("origin", repo.ssh_url());
     let lr = LocalRepo::new(maker.path());
     match lr.github_remote("origin") {
         Ok(lr) if lr == repo => (),
@@ -191,7 +191,7 @@ fn test_branch_upstream() {
     let repo = GHRepo::new("octocat", "repository").unwrap();
     let maker = RepoMaker::new();
     maker.init("trunk");
-    maker.add_remote("github", &repo.clone_url());
+    maker.add_remote("github", repo.clone_url());
     maker.set_upstream("trunk", "github");
     let lr = LocalRepo::new(maker.path());
     match lr.branch_upstream("trunk") {

@@ -16,7 +16,7 @@ fn test_run() {
     let repo = GHRepo::new("octocat", "repository").unwrap();
     let maker = RepoMaker::new();
     maker.init("trunk");
-    maker.add_remote("origin", &repo.ssh_url());
+    maker.add_remote("origin", repo.ssh_url());
     let out = readcmd(&[maker.path().to_str().unwrap()]);
     assert_eq!(out, "octocat/repository");
 }
@@ -39,7 +39,7 @@ fn test_run_json() {
 }";
     let maker = RepoMaker::new();
     maker.init("trunk");
-    maker.add_remote("origin", &repo.ssh_url());
+    maker.add_remote("origin", repo.ssh_url());
     let out = readcmd(&["--json", maker.path().to_str().unwrap()]);
     assert_eq!(out, expected);
 }
@@ -53,8 +53,8 @@ fn test_run_remote() {
     let upstream = GHRepo::new("sourcedog", "repository").unwrap();
     let maker = RepoMaker::new();
     maker.init("trunk");
-    maker.add_remote("origin", &origin.ssh_url());
-    maker.add_remote("upstream", &upstream.clone_url());
+    maker.add_remote("origin", origin.ssh_url());
+    maker.add_remote("upstream", upstream.clone_url());
     let out = readcmd(&["--remote", "upstream", maker.path().to_str().unwrap()]);
     assert_eq!(out, "sourcedog/repository");
 }
