@@ -3,6 +3,7 @@ pub mod repomaker;
 
 use ghrepo::GHRepo;
 use repomaker::RepoMaker;
+use std::path::Path;
 use std::process::Command;
 use std::str;
 use tempfile::tempdir;
@@ -17,7 +18,20 @@ fn test_run() {
     let maker = RepoMaker::new();
     maker.init("trunk");
     maker.add_remote("origin", repo.ssh_url());
-    let out = readcmd(&[maker.path().to_str().unwrap()]);
+    let out = readcmd(&[maker.path().to_str().unwrap()], None);
+    assert_eq!(out, "octocat/repository");
+}
+
+#[test]
+fn test_run_noarg() {
+    if which("git").is_err() {
+        return;
+    }
+    let repo = GHRepo::new("octocat", "repository").unwrap();
+    let maker = RepoMaker::new();
+    maker.init("trunk");
+    maker.add_remote("origin", repo.ssh_url());
+    let out = readcmd(&[], Some(maker.path()));
     assert_eq!(out, "octocat/repository");
 }
 
@@ -40,7 +54,30 @@ fn test_run_json() {
     let maker = RepoMaker::new();
     maker.init("trunk");
     maker.add_remote("origin", repo.ssh_url());
-    let out = readcmd(&["--json", maker.path().to_str().unwrap()]);
+    let out = readcmd(&["--json", maker.path().to_str().unwrap()], None);
+    assert_eq!(out, expected);
+}
+
+#[test]
+fn test_run_json_noarg() {
+    if which("git").is_err() {
+        return;
+    }
+    let repo = GHRepo::new("octocat", "repository").unwrap();
+    let expected = "{
+    \"owner\": \"octocat\",
+    \"name\": \"repository\",
+    \"fullname\": \"octocat/repository\",
+    \"api_url\": \"https://api.github.com/repos/octocat/repository\",
+    \"clone_url\": \"https://github.com/octocat/repository.git\",
+    \"git_url\": \"git://github.com/octocat/repository.git\",
+    \"html_url\": \"https://github.com/octocat/repository\",
+    \"ssh_url\": \"git@github.com:octocat/repository.git\"
+}";
+    let maker = RepoMaker::new();
+    maker.init("trunk");
+    maker.add_remote("origin", repo.ssh_url());
+    let out = readcmd(&["--json"], Some(maker.path()));
     assert_eq!(out, expected);
 }
 
@@ -55,7 +92,25 @@ fn test_run_remote() {
     maker.init("trunk");
     maker.add_remote("origin", origin.ssh_url());
     maker.add_remote("upstream", upstream.clone_url());
-    let out = readcmd(&["--remote", "upstream", maker.path().to_str().unwrap()]);
+    let out = readcmd(
+        &["--remote", "upstream", maker.path().to_str().unwrap()],
+        None,
+    );
+    assert_eq!(out, "sourcedog/repository");
+}
+
+#[test]
+fn test_run_remote_noarg() {
+    if which("git").is_err() {
+        return;
+    }
+    let origin = GHRepo::new("octocat", "repository").unwrap();
+    let upstream = GHRepo::new("sourcedog", "repository").unwrap();
+    let maker = RepoMaker::new();
+    maker.init("trunk");
+    maker.add_remote("origin", origin.ssh_url());
+    maker.add_remote("upstream", upstream.clone_url());
+    let out = readcmd(&["--remote", "upstream"], Some(maker.path()));
     assert_eq!(out, "sourcedog/repository");
 }
 
@@ -121,11 +176,13 @@ fn test_run_invalid_url() {
     assert_eq!(out.status.code(), Some(1));
 }
 
-fn readcmd(args: &[&str]) -> String {
-    let out = Command::new(env!("CARGO_BIN_EXE_ghrepo"))
-        .args(args)
-        .output()
-        .unwrap();
+fn readcmd(args: &[&str], cwd: Option<&Path>) -> String {
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_ghrepo"));
+    cmd.args(args);
+    if let Some(p) = cwd {
+        cmd.current_dir(p);
+    }
+    let out = cmd.output().unwrap();
     assert!(out.status.success());
     return str::from_utf8(&out.stdout).unwrap().trim().to_string();
 }
