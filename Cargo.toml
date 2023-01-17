@@ -1,6 +1,6 @@
 [package]
 name = "ghrepo"
-version = "0.3.0"
+version = "0.4.0-dev"
 edition = "2021"
 rust-version = "1.60"
 description = "Parse & construct GitHub repository URLs & specifiers"
@@ -12,7 +12,7 @@ categories = ["command-line-utilities"]
 exclude = ["/.*"]
 
 [dependencies]
-lexopt = "0.2.1"
+lexopt = "0.3.0"
 
 [dev-dependencies]
 rstest = { version = "0.16.0", default-features = false }

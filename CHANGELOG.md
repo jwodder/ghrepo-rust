@@ -1,3 +1,7 @@
+In Development
+--------------
+- Update lexopt dependency to v0.3.0
+
 v0.3.0 (2022-11-15)
 -------------------
 - Adjust `Display` format of `LocalRepoError::CommandFailed` to use the std
