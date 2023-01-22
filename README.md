@@ -20,7 +20,7 @@ in your Cargo project, add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ghrepo = "0.3.0"
+ghrepo = "0.3.1"
 ```
 
 To install the `ghrepo` command on your system, use `cargo install`:
