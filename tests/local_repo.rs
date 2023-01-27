@@ -54,7 +54,7 @@ fn test_current_branch_empty() {
     let lr = LocalRepo::new(tmp_path.path());
     match lr.current_branch() {
         Err(LocalRepoError::CommandFailed(_)) => (),
-        e => panic!("Git command did not fail; got: {:?}", e),
+        e => panic!("Git command did not fail; got: {e:?}"),
     }
 }
 
@@ -68,7 +68,7 @@ fn test_current_branch() {
     let lr = LocalRepo::new(maker.path());
     match lr.current_branch() {
         Ok(b) if b == "trunk" => (),
-        e => panic!("Got wrong result: {:?}", e),
+        e => panic!("Got wrong result: {e:?}"),
     }
 }
 
@@ -83,7 +83,7 @@ fn test_current_branch_detached() {
     let lr = LocalRepo::new(maker.path());
     match lr.current_branch() {
         Err(LocalRepoError::DetachedHead) => (),
-        e => panic!("Got wrong result: {:?}", e),
+        e => panic!("Got wrong result: {e:?}"),
     }
 }
 
@@ -101,7 +101,7 @@ fn test_github_remote_empty() {
                 "Git command exited unsuccessfully: exit status: 128"
             )
         }
-        e => panic!("Git command did not fail; got: {:?}", e),
+        e => panic!("Git command did not fail; got: {e:?}"),
     }
 }
 
@@ -115,7 +115,7 @@ fn test_github_remote_no_remote() {
     let lr = LocalRepo::new(maker.path());
     match lr.github_remote("origin") {
         Err(LocalRepoError::NoSuchRemote(rem)) if rem == "origin" => (),
-        e => panic!("Git command did not fail; got: {:?}", e),
+        e => panic!("Git command did not fail; got: {e:?}"),
     }
 }
 
@@ -131,7 +131,7 @@ fn test_github_remote() {
     let lr = LocalRepo::new(maker.path());
     match lr.github_remote("origin") {
         Ok(lr) if lr == repo => (),
-        e => panic!("Got wrong result: {:?}", e),
+        e => panic!("Got wrong result: {e:?}"),
     }
 }
 
@@ -146,7 +146,7 @@ fn test_github_remote_invalid_url() {
     let lr = LocalRepo::new(maker.path());
     match lr.github_remote("upstream") {
         Err(LocalRepoError::InvalidRemoteURL(_)) => (),
-        e => panic!("Got wrong result: {:?}", e),
+        e => panic!("Got wrong result: {e:?}"),
     }
 }
 
@@ -165,7 +165,7 @@ fn test_github_remote_non_utf8_url() {
             e.to_string(),
             format!("Failed to decode output from Git command: {eu}")
         ),
-        e => panic!("Got wrong result: {:?}", e),
+        e => panic!("Got wrong result: {e:?}"),
     }
 }
 
@@ -179,7 +179,7 @@ fn test_branch_upstream_no_upstream() {
     let lr = LocalRepo::new(maker.path());
     match lr.branch_upstream("trunk") {
         Err(LocalRepoError::NoUpstream(branch)) if branch == "trunk" => (),
-        e => panic!("Got wrong result: {:?}", e),
+        e => panic!("Got wrong result: {e:?}"),
     }
 }
 
@@ -196,6 +196,6 @@ fn test_branch_upstream() {
     let lr = LocalRepo::new(maker.path());
     match lr.branch_upstream("trunk") {
         Ok(r) if r == repo => (),
-        e => panic!("Got wrong result: {:?}", e),
+        e => panic!("Got wrong result: {e:?}"),
     }
 }

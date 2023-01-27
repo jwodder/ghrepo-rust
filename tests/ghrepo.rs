@@ -315,7 +315,7 @@ fn test_from_str(#[case] spec: &str, #[case] owner: &str, #[case] name: &str) {
 fn test_from_bad_str(#[case] spec: &str) {
     match GHRepo::from_str(spec) {
         Err(ParseError::InvalidSpec(s)) if s == spec => (),
-        e => panic!("Got wrong result: {:?}", e),
+        e => panic!("Got wrong result: {e:?}"),
     }
 }
 
@@ -329,7 +329,7 @@ fn test_from_url(#[case] url: &str, #[case] owner: &str, #[case] name: &str) {
 fn test_from_bad_url(#[case] url: &str) {
     match GHRepo::from_url(url) {
         Err(ParseError::InvalidSpec(s)) if s == url => (),
-        e => panic!("Got wrong result: {:?}", e),
+        e => panic!("Got wrong result: {e:?}"),
     }
 }
 

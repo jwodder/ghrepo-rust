@@ -60,9 +60,9 @@ pub enum ParseError {
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            ParseError::InvalidSpec(s) => write!(f, "Invalid GitHub repository spec: {:?}", s),
-            ParseError::InvalidOwner(s) => write!(f, "Invalid GitHub repository owner: {:?}", s),
-            ParseError::InvalidName(s) => write!(f, "Invalid GitHub repository name: {:?}", s),
+            ParseError::InvalidSpec(s) => write!(f, "Invalid GitHub repository spec: {s:?}"),
+            ParseError::InvalidOwner(s) => write!(f, "Invalid GitHub repository owner: {s:?}"),
+            ParseError::InvalidName(s) => write!(f, "Invalid GitHub repository name: {s:?}"),
         }
     }
 }
@@ -445,32 +445,31 @@ impl fmt::Display for LocalRepoError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             LocalRepoError::CouldNotExecute(e) => {
-                write!(f, "Failed to execute Git command: {}", e)
+                write!(f, "Failed to execute Git command: {e}")
             }
             LocalRepoError::CommandFailed(r) => {
-                write!(f, "Git command exited unsuccessfully: {}", r)
+                write!(f, "Git command exited unsuccessfully: {r}")
             }
             LocalRepoError::CurdirError(e) => {
-                write!(f, "Could not determine current directory: {}", e)
+                write!(f, "Could not determine current directory: {e}")
             }
             LocalRepoError::DetachedHead => {
                 write!(f, "Git repository is in a detached HEAD state")
             }
             LocalRepoError::NoSuchRemote(remote) => {
-                write!(f, "No such remote in Git repository: {:?}", remote)
+                write!(f, "No such remote in Git repository: {remote:?}")
             }
             LocalRepoError::NoUpstream(branch) => {
                 write!(
                     f,
-                    "No upstream remote configured for Git branch: {:?}",
-                    branch
+                    "No upstream remote configured for Git branch: {branch:?}"
                 )
             }
             LocalRepoError::InvalidUtf8(e) => {
-                write!(f, "Failed to decode output from Git command: {}", e)
+                write!(f, "Failed to decode output from Git command: {e}")
             }
             LocalRepoError::InvalidRemoteURL(e) => {
-                write!(f, "Repository remote URL is not a GitHub URL: {}", e)
+                write!(f, "Repository remote URL is not a GitHub URL: {e}")
             }
         }
     }
