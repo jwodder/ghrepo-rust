@@ -105,26 +105,26 @@ pub(crate) fn parse_github_url(s: &str) -> Option<(&str, &str)> {
     loop {
         state = match state {
             State::Start => [
-                (vec![Token::CaseFold("https://")], State::Http),
-                (vec![Token::CaseFold("http://")], State::Http),
+                (&[Token::CaseFold("https://")][..], State::Http),
+                (&[Token::CaseFold("http://")][..], State::Http),
                 (
-                    vec![Token::CaseFold("api.github.com"), "/repos/".into()],
+                    &[Token::CaseFold("api.github.com"), "/repos/".into()][..],
                     State::OwnerName,
                 ),
                 (
-                    vec![Token::CaseFold("git://github.com/")],
+                    &[Token::CaseFold("git://github.com/")][..],
                     State::OwnerNameGit,
                 ),
                 (
-                    vec!["git@".into(), Token::CaseFold("github.com:")],
+                    &["git@".into(), Token::CaseFold("github.com:")][..],
                     State::OwnerNameGit,
                 ),
                 (
-                    vec![
+                    &[
                         Token::CaseFold("ssh://"),
                         "git@".into(),
                         Token::CaseFold("github.com/"),
-                    ],
+                    ][..],
                     State::OwnerNameGit,
                 ),
             ]
@@ -133,7 +133,7 @@ pub(crate) fn parse_github_url(s: &str) -> Option<(&str, &str)> {
             .unwrap_or(State::Web),
             State::Http => {
                 if parser
-                    .consume_seq([Token::CaseFold("api.github.com"), "/repos/".into()])
+                    .consume_seq(&[Token::CaseFold("api.github.com"), "/repos/".into()][..])
                     .is_some()
                 {
                     State::OwnerName
@@ -173,12 +173,12 @@ impl<'a> PullParser<'a> {
         Self { data }
     }
 
-    fn consume_seq<I>(&mut self, tokens: I) -> Option<()>
+    fn consume_seq<'b, I>(&mut self, tokens: I) -> Option<()>
     where
-        I: IntoIterator<Item = Token>,
+        I: IntoIterator<Item = &'b Token>,
     {
         let orig = self.data;
-        for t in tokens.into_iter() {
+        for &t in tokens.into_iter() {
             if self.consume(t).is_none() {
                 self.data = orig;
                 return None;
@@ -317,11 +317,11 @@ mod tests {
     }
 
     #[rstest]
-    #[case("FOOBar", vec![Token::CaseFold("foo"), "bar".into()], None, "FOOBar")]
-    #[case("FOOBar", vec![Token::CaseFold("foo"), Token::CaseFold("bar")], Some(()), "")]
+    #[case("FOOBar", &[Token::CaseFold("foo"), "bar".into()][..], None, "FOOBar")]
+    #[case("FOOBar", &[Token::CaseFold("foo"), Token::CaseFold("bar")][..], Some(()), "")]
     fn test_consume_seq(
         #[case] start: &str,
-        #[case] tokens: Vec<Token>,
+        #[case] tokens: &[Token],
         #[case] out: Option<()>,
         #[case] end: &str,
     ) {
