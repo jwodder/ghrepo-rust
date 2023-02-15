@@ -1,11 +1,9 @@
 // Use "pub" to silence some "unused code" warnings
 pub mod repomaker;
 
+use assert_cmd::Command;
 use ghrepo::GHRepo;
 use repomaker::RepoMaker;
-use std::path::Path;
-use std::process::Command;
-use std::str;
 use tempfile::tempdir;
 use which::which;
 
@@ -18,8 +16,12 @@ fn test_run() {
     let maker = RepoMaker::new();
     maker.init("trunk");
     maker.add_remote("origin", repo.ssh_url());
-    let out = readcmd(&[maker.path().to_str().unwrap()], None);
-    assert_eq!(out, "octocat/repository");
+    Command::cargo_bin("ghrepo")
+        .unwrap()
+        .arg(maker.path())
+        .assert()
+        .success()
+        .stdout("octocat/repository\n");
 }
 
 #[test]
@@ -31,8 +33,12 @@ fn test_run_noarg() {
     let maker = RepoMaker::new();
     maker.init("trunk");
     maker.add_remote("origin", repo.ssh_url());
-    let out = readcmd(&[], Some(maker.path()));
-    assert_eq!(out, "octocat/repository");
+    Command::cargo_bin("ghrepo")
+        .unwrap()
+        .current_dir(maker.path())
+        .assert()
+        .success()
+        .stdout("octocat/repository\n");
 }
 
 #[test]
@@ -50,12 +56,17 @@ fn test_run_json() {
     \"git_url\": \"git://github.com/octocat/repository.git\",
     \"html_url\": \"https://github.com/octocat/repository\",
     \"ssh_url\": \"git@github.com:octocat/repository.git\"
-}";
+}\n";
     let maker = RepoMaker::new();
     maker.init("trunk");
     maker.add_remote("origin", repo.ssh_url());
-    let out = readcmd(&["--json", maker.path().to_str().unwrap()], None);
-    assert_eq!(out, expected);
+    Command::cargo_bin("ghrepo")
+        .unwrap()
+        .arg("--json")
+        .arg(maker.path())
+        .assert()
+        .success()
+        .stdout(expected);
 }
 
 #[test]
@@ -73,12 +84,17 @@ fn test_run_json_noarg() {
     \"git_url\": \"git://github.com/octocat/repository.git\",
     \"html_url\": \"https://github.com/octocat/repository\",
     \"ssh_url\": \"git@github.com:octocat/repository.git\"
-}";
+}\n";
     let maker = RepoMaker::new();
     maker.init("trunk");
     maker.add_remote("origin", repo.ssh_url());
-    let out = readcmd(&["--json"], Some(maker.path()));
-    assert_eq!(out, expected);
+    Command::cargo_bin("ghrepo")
+        .unwrap()
+        .arg("--json")
+        .current_dir(maker.path())
+        .assert()
+        .success()
+        .stdout(expected);
 }
 
 #[test]
@@ -92,11 +108,14 @@ fn test_run_remote() {
     maker.init("trunk");
     maker.add_remote("origin", origin.ssh_url());
     maker.add_remote("upstream", upstream.clone_url());
-    let out = readcmd(
-        &["--remote", "upstream", maker.path().to_str().unwrap()],
-        None,
-    );
-    assert_eq!(out, "sourcedog/repository");
+    Command::cargo_bin("ghrepo")
+        .unwrap()
+        .arg("--remote")
+        .arg("upstream")
+        .arg(maker.path())
+        .assert()
+        .success()
+        .stdout("sourcedog/repository\n");
 }
 
 #[test]
@@ -110,8 +129,14 @@ fn test_run_remote_noarg() {
     maker.init("trunk");
     maker.add_remote("origin", origin.ssh_url());
     maker.add_remote("upstream", upstream.clone_url());
-    let out = readcmd(&["--remote", "upstream"], Some(maker.path()));
-    assert_eq!(out, "sourcedog/repository");
+    Command::cargo_bin("ghrepo")
+        .unwrap()
+        .arg("--remote")
+        .arg("upstream")
+        .current_dir(maker.path())
+        .assert()
+        .success()
+        .stdout("sourcedog/repository\n");
 }
 
 #[test]
@@ -120,16 +145,13 @@ fn test_run_empty() {
         return;
     }
     let tmp_path = tempdir().unwrap();
-    let out = Command::new(env!("CARGO_BIN_EXE_ghrepo"))
+    Command::cargo_bin("ghrepo")
+        .unwrap()
         .arg(tmp_path.path())
-        .output()
-        .unwrap();
-    assert_eq!(str::from_utf8(&out.stdout).unwrap(), "");
-    assert_eq!(
-        str::from_utf8(&out.stderr).unwrap().trim(),
-        "fatal: not a git repository (or any of the parent directories): .git"
-    );
-    assert!(!out.status.success());
+        .assert()
+        .failure()
+        .stdout("")
+        .stderr("fatal: not a git repository (or any of the parent directories): .git\n");
 }
 
 #[test]
@@ -139,16 +161,13 @@ fn test_run_no_such_remote() {
     }
     let maker = RepoMaker::new();
     maker.init("trunk");
-    let out = Command::new(env!("CARGO_BIN_EXE_ghrepo"))
+    Command::cargo_bin("ghrepo")
+        .unwrap()
         .arg(maker.path())
-        .output()
-        .unwrap();
-    assert_eq!(str::from_utf8(&out.stdout).unwrap(), "");
-    assert_eq!(
-        str::from_utf8(&out.stderr).unwrap().trim(),
-        "error: No such remote 'origin'"
-    );
-    assert_eq!(out.status.code(), Some(2));
+        .assert()
+        .failure()
+        .stdout("")
+        .stderr("error: No such remote 'origin'\n");
 }
 
 #[test]
@@ -159,30 +178,16 @@ fn test_run_invalid_url() {
     let maker = RepoMaker::new();
     maker.init("trunk");
     maker.add_remote("upstream", "https://git.example.com/repo.git");
-    let out = Command::new(env!("CARGO_BIN_EXE_ghrepo"))
+    Command::cargo_bin("ghrepo")
+        .unwrap()
         .arg("-rupstream")
         .arg(maker.path())
-        .output()
-        .unwrap();
-    assert_eq!(str::from_utf8(&out.stdout).unwrap(), "");
-    assert_eq!(
-        str::from_utf8(&out.stderr).unwrap().trim(),
-        concat!(
+        .assert()
+        .code(1)
+        .stdout("")
+        .stderr(concat!(
             "ghrepo: Repository remote URL is not a GitHub URL:",
             " Invalid GitHub repository spec:",
-            " \"https://git.example.com/repo.git\"",
-        ),
-    );
-    assert_eq!(out.status.code(), Some(1));
-}
-
-fn readcmd(args: &[&str], cwd: Option<&Path>) -> String {
-    let mut cmd = Command::new(env!("CARGO_BIN_EXE_ghrepo"));
-    cmd.args(args);
-    if let Some(p) = cwd {
-        cmd.current_dir(p);
-    }
-    let out = cmd.output().unwrap();
-    assert!(out.status.success());
-    return str::from_utf8(&out.stdout).unwrap().trim().to_string();
+            " \"https://git.example.com/repo.git\"\n",
+        ));
 }
