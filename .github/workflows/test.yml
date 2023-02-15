@@ -63,7 +63,7 @@ jobs:
         run: cargo build --verbose
 
       - name: Test crate
-        run: cargo hack --feature-powerset test --verbose
+        run: cargo hack --optional-deps --feature-powerset test --verbose
 
   coverage:
     # This is separate from the main tests because cargo-llvm-cov doesn't run
@@ -121,7 +121,7 @@ jobs:
         uses: taiki-e/install-action@cargo-hack
 
       - name: Check code
-        run: cargo hack --feature-powerset clippy --all-targets -- -Dwarnings
+        run: cargo hack --optional-deps --feature-powerset clippy --all-targets -- -Dwarnings
 
       - name: Check formatting
         run: cargo fmt --check
