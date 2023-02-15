@@ -12,6 +12,9 @@ possible URLs.  Also included is a struct for performing a couple useful
 inspections on local Git repositories, including determining the corresponding
 GitHub owner & repository name.
 
+When the `serde` feature is enabled, the `GHRepo` type will additionally be
+serializable & deserializable with `serde`.
+
 Installation
 ============
 
@@ -20,7 +23,14 @@ in your Cargo project, add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ghrepo = "0.3.1"
+ghrepo = "0.4.0"
+```
+
+To use `ghrepo` with its `serde` feature, add the following instead:
+
+```toml
+[dependencies]
+ghrepo = { version = "0.4.0", features = ["serde"] }
 ```
 
 To install the `ghrepo` command on your system, use `cargo install`:

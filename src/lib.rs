@@ -1,3 +1,4 @@
+#![cfg_attr(docsrs, feature(doc_cfg))]
 //! Parse & construct GitHub repository URLs & specifiers
 //!
 //! `ghrepo` extracts a GitHub repository's owner & name from various GitHub
@@ -6,6 +7,9 @@
 //! reverse to determine the possible URLs.  Also included is a struct for
 //! performing a couple useful inspections on local Git repositories, including
 //! determining the corresponding GitHub owner & repository name.
+//!
+//! When the `serde` feature is enabled, the `GHRepo` type will additionally be
+//! serializable & deserializable with `serde`.
 //!
 //! ```
 //! # use std::error::Error;
@@ -36,6 +40,13 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
 use std::str::{self, FromStr};
+
+#[cfg(feature = "serde")]
+use serde::de::{Deserializer, Unexpected, Visitor};
+#[cfg(feature = "serde")]
+use serde::ser::Serializer;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 /// Error returned when trying to construct a [`GHRepo`] with invalid arguments
 /// or parse an invalid repository spec
@@ -83,6 +94,11 @@ impl error::Error for ParseError {}
 ///
 /// Displaying a `GHRepo` instance produces a repository "fullname" of the form
 /// `{owner}/{name}`.
+///
+/// When the `serde` feature is enabled, `GHRepo` instances can be serialized &
+/// deserialized with the `serde` library.  Serialization produces a string of
+/// the form `{owner}/{name}`, and deserialization accepts any string of a form
+/// accepted by [`GHRepo::from_str`].
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct GHRepo {
     owner: String,
@@ -268,6 +284,49 @@ impl FromStr for GHRepo {
             Some((owner, name, "")) => GHRepo::new(owner, name),
             _ => GHRepo::from_url(s),
         }
+    }
+}
+
+#[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+impl Serialize for GHRepo {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+#[cfg(feature = "serde")]
+#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
+impl<'de> Deserialize<'de> for GHRepo {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct GHRepoVisitor;
+
+        impl<'de> Visitor<'de> for GHRepoVisitor {
+            type Value = GHRepo;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str(
+                    "a GitHub repository of the form OWNER/NAME or a GitHub repository URL",
+                )
+            }
+
+            fn visit_str<E>(self, input: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                input
+                    .parse::<GHRepo>()
+                    .map_err(|_| E::invalid_value(Unexpected::Str(input), &self))
+            }
+        }
+
+        deserializer.deserialize_str(GHRepoVisitor)
     }
 }
 

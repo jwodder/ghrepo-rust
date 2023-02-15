@@ -1,6 +1,6 @@
 [package]
 name = "ghrepo"
-version = "0.3.1"
+version = "0.4.0-dev"
 edition = "2021"
 rust-version = "1.60"
 description = "Parse & construct GitHub repository URLs & specifiers"
@@ -13,10 +13,17 @@ exclude = ["/.*"]
 
 [dependencies]
 lexopt = "0.3.0"
+serde = { version = "1.0.152", optional = true }
 
 [dev-dependencies]
 assert_cmd = "2.0.8"
 rstest = { version = "0.16.0", default-features = false }
 rstest_reuse = "0.5.0"
+serde = { version = "1.0.152", features = ["derive"] }
+serde_json = "1.0.93"
 tempfile = "3.3.0"
 which = "4.4.0"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

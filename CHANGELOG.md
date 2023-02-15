@@ -1,3 +1,8 @@
+v0.4.0 (in development)
+-----------------------
+- Added an optional `serde` feature that gives `GHRepo` `Serialize` and
+  `Deserialize` implementations
+
 v0.3.1 (2023-01-21)
 -------------------
 - Update lexopt dependency to v0.3.0
