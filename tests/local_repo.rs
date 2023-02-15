@@ -4,10 +4,11 @@ pub mod repomaker;
 use ghrepo::{GHRepo, LocalRepo, LocalRepoError};
 use repomaker::RepoMaker;
 use std::env;
-use std::ffi::OsStr;
 use tempfile::tempdir;
 use which::which;
 
+#[cfg(unix)]
+use std::ffi::OsStr;
 #[cfg(unix)]
 use std::os::unix::ffi::OsStrExt;
 
