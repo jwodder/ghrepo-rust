@@ -1,5 +1,5 @@
-v0.4.0 (in development)
------------------------
+v0.4.0 (2023-02-15)
+-------------------
 - Added an optional `serde` feature that gives `GHRepo` `Serialize` and
   `Deserialize` implementations
 
