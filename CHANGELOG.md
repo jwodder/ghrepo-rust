@@ -1,6 +1,7 @@
 v0.5.0 (in development)
 -----------------------
 - Increased MSRV to 1.64
+- Convert error Displays to lowercase per Rust conventions
 
 v0.4.0 (2023-02-15)
 -------------------

@@ -165,7 +165,7 @@ fn test_github_remote_non_utf8_url() {
     match lr.github_remote("upstream") {
         Err(ref e @ LocalRepoError::InvalidUtf8(eu)) => assert_eq!(
             e.to_string(),
-            format!("Failed to decode output from Git command: {eu}")
+            format!("failed to decode output from Git command: {eu}")
         ),
         e => panic!("Got wrong result: {e:?}"),
     }

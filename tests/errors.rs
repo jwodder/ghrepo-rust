@@ -4,7 +4,7 @@ use std::io::{Error, ErrorKind};
 #[test]
 fn test_display_parse_error_invalid_spec() {
     let e = ParseError::InvalidSpec("foo.bar".to_string());
-    assert_eq!(e.to_string(), "Invalid GitHub repository spec: \"foo.bar\"");
+    assert_eq!(e.to_string(), "invalid GitHub repository spec: \"foo.bar\"");
 }
 
 #[test]
@@ -12,14 +12,14 @@ fn test_display_parse_error_invalid_owner() {
     let e = ParseError::InvalidOwner("foo.bar".to_string());
     assert_eq!(
         e.to_string(),
-        "Invalid GitHub repository owner: \"foo.bar\""
+        "invalid GitHub repository owner: \"foo.bar\""
     );
 }
 
 #[test]
 fn test_display_parse_error_invalid_name() {
     let e = ParseError::InvalidName("foo.git".to_string());
-    assert_eq!(e.to_string(), "Invalid GitHub repository name: \"foo.git\"");
+    assert_eq!(e.to_string(), "invalid GitHub repository name: \"foo.git\"");
 }
 
 #[test]
@@ -28,7 +28,7 @@ fn test_display_local_repo_error_could_not_execute() {
     assert_eq!(
         e.to_string(),
         format!(
-            "Failed to execute Git command: {}",
+            "failed to execute Git command: {}",
             Error::from(ErrorKind::NotFound)
         )
     );
@@ -40,7 +40,7 @@ fn test_display_local_repo_error_curdir() {
     assert_eq!(
         e.to_string(),
         format!(
-            "Could not determine current directory: {}",
+            "could not determine current directory: {}",
             Error::from(ErrorKind::NotFound)
         )
     );
@@ -57,7 +57,7 @@ fn test_display_local_repo_error_no_such_remote() {
     let e = LocalRepoError::NoSuchRemote("origin".to_string());
     assert_eq!(
         e.to_string(),
-        "No such remote in Git repository: \"origin\""
+        "no such remote in Git repository: \"origin\""
     );
 }
 
@@ -66,7 +66,7 @@ fn test_display_local_repo_error_no_upstream() {
     let e = LocalRepoError::NoUpstream("main".to_string());
     assert_eq!(
         e.to_string(),
-        "No upstream remote configured for Git branch: \"main\""
+        "no upstream remote configured for Git branch: \"main\""
     );
 }
 
@@ -75,6 +75,6 @@ fn test_display_local_repo_error_parse_error() {
     let e = LocalRepoError::InvalidRemoteURL(ParseError::InvalidSpec("foo.bar".to_string()));
     assert_eq!(
         e.to_string(),
-        "Repository remote URL is not a GitHub URL: Invalid GitHub repository spec: \"foo.bar\""
+        "repository remote URL is not a GitHub URL: invalid GitHub repository spec: \"foo.bar\""
     );
 }

@@ -186,8 +186,8 @@ fn test_run_invalid_url() {
         .code(1)
         .stdout("")
         .stderr(concat!(
-            "ghrepo: Repository remote URL is not a GitHub URL:",
-            " Invalid GitHub repository spec:",
+            "ghrepo: repository remote URL is not a GitHub URL:",
+            " invalid GitHub repository spec:",
             " \"https://git.example.com/repo.git\"\n",
         ));
 }
