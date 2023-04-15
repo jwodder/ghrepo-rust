@@ -18,7 +18,7 @@ serializable & deserializable with `serde`.
 Installation
 ============
 
-`ghrepo` requires version 1.60 of Rust or higher.  To use the `ghrepo` library
+`ghrepo` requires version 1.64 of Rust or higher.  To use the `ghrepo` library
 in your Cargo project, add the following to your `Cargo.toml`:
 
 ```toml
