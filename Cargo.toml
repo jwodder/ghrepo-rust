@@ -2,7 +2,7 @@
 name = "ghrepo"
 version = "0.5.0-dev"
 edition = "2021"
-rust-version = "1.64"
+rust-version = "1.65"
 description = "Parse & construct GitHub repository URLs & specifiers"
 authors = ["John Thorvald Wodder II <ghrepo@varonathe.org>"]
 repository = "https://github.com/jwodder/ghrepo-rust"
