@@ -143,6 +143,8 @@ impl GHRepo {
     /// any point, just because a name is accepted doesn't necessarily mean you
     /// can create a user by that name on GitHub today.
     ///
+    /// # Example
+    ///
     /// ```
     /// # use ghrepo::GHRepo;
     /// assert!(GHRepo::is_valid_owner("octocat"));
@@ -161,6 +163,8 @@ impl GHRepo {
     /// composed of alphanumeric ASCII characters, hyphens, periods, and/or
     /// underscores, with the names `.` and `..` being reserved and names
     /// ending with `.git` (case insensitive) forbidden.
+    ///
+    /// # Example
     ///
     /// ```
     /// # use ghrepo::GHRepo;
