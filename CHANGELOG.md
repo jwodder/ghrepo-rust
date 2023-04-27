@@ -1,5 +1,5 @@
-v0.5.0 (in development)
------------------------
+v0.5.0 (2023-04-27)
+-------------------
 - Increased MSRV to 1.65
 - Convert error Displays to lowercase per Rust conventions
 - The packages needed soley for the CLI are now behind a default `cli` feature
