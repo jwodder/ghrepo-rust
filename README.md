@@ -23,14 +23,17 @@ in your Cargo project, add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ghrepo = "0.4.0"
+# By default, ghrepo depends on some packages only needed for its command-line
+# interface; disable the default features so that these dependencies aren't
+# pulled in when using as a library.
+ghrepo = { version = "0.4.0", default-features = false }
 ```
 
 To use `ghrepo` with its `serde` feature, add the following instead:
 
 ```toml
 [dependencies]
-ghrepo = { version = "0.4.0", features = ["serde"] }
+ghrepo = { version = "0.4.0", default-features = false, features = ["serde"] }
 ```
 
 To install the `ghrepo` command on your system, use `cargo install`:

@@ -6,6 +6,10 @@ on:
   schedule:
     - cron: '0 12 * * *'
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
@@ -63,7 +67,12 @@ jobs:
         run: cargo build --verbose
 
       - name: Test crate
-        run: cargo hack --optional-deps --feature-powerset test --verbose
+        run: |
+          cargo hack \
+            --optional-deps \
+            --feature-powerset \
+            --exclude-features default \
+            test --verbose
 
   coverage:
     # This is separate from the main tests because cargo-llvm-cov doesn't run
@@ -120,8 +129,13 @@ jobs:
       - name: Install cargo-hack
         uses: taiki-e/install-action@cargo-hack
 
-      - name: Check code
-        run: cargo hack --optional-deps --feature-powerset clippy --all-targets -- -Dwarnings
+      - name: Test crate
+        run: |
+          cargo hack \
+            --optional-deps \
+            --feature-powerset \
+            --exclude-features default \
+            clippy --all-targets -- -Dwarnings
 
       - name: Check formatting
         run: cargo fmt --check
