@@ -64,7 +64,12 @@ jobs:
         uses: taiki-e/install-action@cargo-hack
 
       - name: Build crate
-        run: cargo build --verbose
+        run: |
+          cargo hack \
+            --optional-deps \
+            --feature-powerset \
+            --exclude-features default \
+            build --all-targets --verbose
 
       - name: Test crate
         run: |
