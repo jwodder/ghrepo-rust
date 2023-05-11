@@ -1,3 +1,8 @@
+v0.6.0 (in development)
+-----------------------
+- Remove library installation instructions from README
+- List all features in the library documentation
+
 v0.5.0 (2023-04-27)
 -------------------
 - Increased MSRV to 1.65

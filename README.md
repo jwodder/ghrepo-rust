@@ -1,6 +1,7 @@
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 [![CI Status](https://github.com/jwodder/ghrepo-rust/actions/workflows/test.yml/badge.svg)](https://github.com/jwodder/ghrepo-rust/actions/workflows/test.yml)
 [![codecov.io](https://codecov.io/gh/jwodder/ghrepo-rust/branch/master/graph/badge.svg)](https://codecov.io/gh/jwodder/ghrepo-rust)
+[![Minimum Supported Rust Version](https://img.shields.io/badge/MSRV-1.65-orange)](https://www.rust-lang.org)
 [![MIT License](https://img.shields.io/github/license/jwodder/ghrepo-rust.svg)](https://opensource.org/licenses/MIT)
 
 [GitHub](https://github.com/jwodder/ghrepo-rust) | [crates.io](https://crates.io/crates/ghrepo) | [Documentation](https://docs.rs/ghrepo) | [Issues](https://github.com/jwodder/ghrepo-rust/issues) | [Changelog](https://github.com/jwodder/ghrepo-rust/blob/master/CHANGELOG.md)
@@ -11,35 +12,6 @@ the resulting object provides properties for going in reverse to determine the
 possible URLs.  Also included is a struct for performing a couple useful
 inspections on local Git repositories, including determining the corresponding
 GitHub owner & repository name.
-
-When the `serde` feature is enabled, the `GHRepo` type will additionally be
-serializable & deserializable with `serde`.
-
-Installation
-============
-
-`ghrepo` requires version 1.65 of Rust or higher.  To use the `ghrepo` library
-in your Cargo project, add the following to your `Cargo.toml`:
-
-```toml
-[dependencies]
-# By default, ghrepo depends on some packages only needed for its command-line
-# interface; disable the default features so that these dependencies aren't
-# pulled in when using as a library.
-ghrepo = { version = "0.5.0", default-features = false }
-```
-
-To use `ghrepo` with its `serde` feature, add the following instead:
-
-```toml
-[dependencies]
-ghrepo = { version = "0.5.0", default-features = false, features = ["serde"] }
-```
-
-To install the `ghrepo` command on your system, use `cargo install`:
-
-    cargo install ghrepo
-
 
 Example
 =======
@@ -69,7 +41,13 @@ Command
 =======
 
 `ghrepo` also provides a command of the same name for getting the GitHub
-repository associated with a local Git repository:
+repository associated with a local Git repository.  To install this command on
+your system, run:
+
+    cargo install ghrepo
+
+Usage
+-----
 
 ```text
 ghrepo [<options>] [<dirpath>]

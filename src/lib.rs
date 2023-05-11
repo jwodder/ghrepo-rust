@@ -1,6 +1,4 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
-//! Parse & construct GitHub repository URLs & specifiers
-//!
 //! `ghrepo` extracts a GitHub repository's owner & name from various GitHub
 //! URL formats (or just from a string of the form `OWNER/REPONAME` or
 //! `REPONAME`), and the resulting object provides properties for going in
@@ -8,8 +6,8 @@
 //! performing a couple useful inspections on local Git repositories, including
 //! determining the corresponding GitHub owner & repository name.
 //!
-//! When the `serde` feature is enabled, the `GHRepo` type will additionally be
-//! serializable & deserializable with `serde`.
+//! Example
+//! =======
 //!
 //! ```
 //! # use std::error::Error;
@@ -30,6 +28,18 @@
 //! #     Ok(())
 //! # }
 //! ```
+//!
+//! Features
+//! ========
+//!
+//! The `ghrepo` crate has the following optional features:
+//!
+//! - `cli` — Adds dependencies needed by the `ghrepo` binary.  This is enabled
+//!   by default, but if you are using `ghrepo` as a library, it is recommended
+//!   that you remove it by disabling default features.
+//!
+//! - `serde` — Enables serializing & deserializing the `GHRepo` type with
+//!   [`serde`](https://crates.io/crates/serde)
 
 mod parser;
 use crate::parser::{parse_github_url, split_name, split_owner, split_owner_name};
