@@ -6,6 +6,18 @@
 //! performing a couple useful inspections on local Git repositories, including
 //! determining the corresponding GitHub owner & repository name.
 //!
+//! Features
+//! ========
+//!
+//! The `ghrepo` crate has the following optional features:
+//!
+//! - `cli` — Adds dependencies needed by the `ghrepo` binary.  This is enabled
+//!   by default, but if you are using `ghrepo` as a library, it is recommended
+//!   that you remove it by disabling default features.
+//!
+//! - `serde` — Enables serializing & deserializing the `GHRepo` type with
+//!   [`serde`](https://crates.io/crates/serde)
+//!
 //! Example
 //! =======
 //!
@@ -28,18 +40,6 @@
 //! #     Ok(())
 //! # }
 //! ```
-//!
-//! Features
-//! ========
-//!
-//! The `ghrepo` crate has the following optional features:
-//!
-//! - `cli` — Adds dependencies needed by the `ghrepo` binary.  This is enabled
-//!   by default, but if you are using `ghrepo` as a library, it is recommended
-//!   that you remove it by disabling default features.
-//!
-//! - `serde` — Enables serializing & deserializing the `GHRepo` type with
-//!   [`serde`](https://crates.io/crates/serde)
 
 mod parser;
 use crate::parser::{parse_github_url, split_name, split_owner, split_owner_name};
