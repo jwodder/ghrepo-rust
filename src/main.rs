@@ -110,7 +110,7 @@ fn run(dirpath: Option<PathBuf>, json: bool, remote: String) -> Result<String, L
             ),
             gr.owner(),
             gr.name(),
-            gr.to_string(),
+            gr,
             gr.api_url(),
             gr.clone_url(),
             gr.git_url(),
