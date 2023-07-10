@@ -13,14 +13,14 @@ exclude = ["/.*"]
 
 [dependencies]
 lexopt = { version = "0.3.0", optional = true }
-serde = { version = "1.0.164", optional = true }
+serde = { version = "1.0.171", optional = true }
 
 [dev-dependencies]
 assert_cmd = "2.0.11"
-rstest = { version = "0.17.0", default-features = false }
-rstest_reuse = "0.5.0"
-serde = { version = "1.0.164", features = ["derive"] }
-serde_json = "1.0.99"
+rstest = { version = "0.18.1", default-features = false }
+rstest_reuse = "0.6.0"
+serde = { version = "1.0.171", features = ["derive"] }
+serde_json = "1.0.100"
 tempfile = "3.6.0"
 which = "4.4.0"
 
