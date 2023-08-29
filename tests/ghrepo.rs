@@ -1,3 +1,4 @@
+#![allow(clippy::items_after_test_module)]
 #[cfg(test)]
 extern crate rstest_reuse;
 

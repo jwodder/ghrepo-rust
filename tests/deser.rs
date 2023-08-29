@@ -1,3 +1,4 @@
+#![allow(clippy::items_after_test_module)]
 #![cfg(feature = "serde")]
 use ghrepo::GHRepo;
 use rstest::rstest;
