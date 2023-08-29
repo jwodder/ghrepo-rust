@@ -2,6 +2,8 @@ name: Test
 
 on:
   push:
+    branches-ignore:
+      - 'dependabot/**'
   pull_request:
   schedule:
     - cron: '0 12 * * *'
@@ -9,6 +11,10 @@ on:
 defaults:
   run:
     shell: bash
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -58,6 +64,7 @@ jobs:
           toolchain: ${{ steps.minimal-version.outputs.msrv }}
 
       - name: Activate cache
+        if: github.actor != 'dependabot[bot]'
         uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-hack
@@ -100,6 +107,7 @@ jobs:
           components: llvm-tools-preview
 
       - name: Activate cache
+        if: github.actor != 'dependabot[bot]'
         uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-llvm-cov
@@ -129,12 +137,13 @@ jobs:
           components: clippy, rustfmt
 
       - name: Activate cache
+        if: github.actor != 'dependabot[bot]'
         uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-hack
         uses: taiki-e/install-action@cargo-hack
 
-      - name: Test crate
+      - name: Check code
         run: |
           cargo hack \
             --optional-deps \
@@ -157,6 +166,7 @@ jobs:
           toolchain: nightly
 
       - name: Activate cache
+        if: github.actor != 'dependabot[bot]'
         uses: Swatinem/rust-cache@v2
 
       - name: Check docs
