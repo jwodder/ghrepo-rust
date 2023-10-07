@@ -129,7 +129,7 @@ pub(crate) fn parse_github_url(s: &str) -> Option<(&str, &str)> {
                 ),
             ]
             .into_iter()
-            .find_map(|(token, transition)| parser.consume_seq(token).and(Some(transition)))
+            .find_map(|(tokens, transition)| parser.consume_seq(tokens).and(Some(transition)))
             .unwrap_or(State::Web),
             State::Http => {
                 if parser
