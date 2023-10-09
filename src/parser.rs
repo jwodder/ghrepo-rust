@@ -78,6 +78,28 @@ impl From<&'static str> for Token {
     }
 }
 
+static START_PATTERNS: &[(&[Token], State)] = &[
+    (&[Token::CaseFold("https://")], State::Http),
+    (&[Token::CaseFold("http://")], State::Http),
+    (
+        &[Token::CaseFold("api.github.com"), Token::Literal("/repos/")],
+        State::OwnerName,
+    ),
+    (&[Token::CaseFold("git://github.com/")], State::OwnerNameGit),
+    (
+        &[Token::Literal("git@"), Token::CaseFold("github.com:")],
+        State::OwnerNameGit,
+    ),
+    (
+        &[
+            Token::CaseFold("ssh://"),
+            Token::Literal("git@"),
+            Token::CaseFold("github.com/"),
+        ],
+        State::OwnerNameGit,
+    ),
+];
+
 /// If `s` is a valid GitHub repository URL, return the repository owner &
 /// name.  The following URL formats are recognized:
 ///
@@ -104,36 +126,13 @@ pub(crate) fn parse_github_url(s: &str) -> Option<(&str, &str)> {
     let mut result: Option<(&str, &str)> = None;
     loop {
         state = match state {
-            State::Start => [
-                (&[Token::CaseFold("https://")][..], State::Http),
-                (&[Token::CaseFold("http://")][..], State::Http),
-                (
-                    &[Token::CaseFold("api.github.com"), "/repos/".into()][..],
-                    State::OwnerName,
-                ),
-                (
-                    &[Token::CaseFold("git://github.com/")][..],
-                    State::OwnerNameGit,
-                ),
-                (
-                    &["git@".into(), Token::CaseFold("github.com:")][..],
-                    State::OwnerNameGit,
-                ),
-                (
-                    &[
-                        Token::CaseFold("ssh://"),
-                        "git@".into(),
-                        Token::CaseFold("github.com/"),
-                    ][..],
-                    State::OwnerNameGit,
-                ),
-            ]
-            .into_iter()
-            .find_map(|(tokens, transition)| parser.consume_seq(tokens).and(Some(transition)))
-            .unwrap_or(State::Web),
+            State::Start => START_PATTERNS
+                .iter()
+                .find_map(|&(tokens, transition)| parser.consume_seq(tokens).and(Some(transition)))
+                .unwrap_or(State::Web),
             State::Http => {
                 if parser
-                    .consume_seq(&[Token::CaseFold("api.github.com"), "/repos/".into()][..])
+                    .consume_seq(&[Token::CaseFold("api.github.com"), "/repos/".into()])
                     .is_some()
                 {
                     State::OwnerName
@@ -317,8 +316,8 @@ mod tests {
     }
 
     #[rstest]
-    #[case("FOOBar", &[Token::CaseFold("foo"), "bar".into()][..], None, "FOOBar")]
-    #[case("FOOBar", &[Token::CaseFold("foo"), Token::CaseFold("bar")][..], Some(()), "")]
+    #[case("FOOBar", &[Token::CaseFold("foo"), "bar".into()], None, "FOOBar")]
+    #[case("FOOBar", &[Token::CaseFold("foo"), Token::CaseFold("bar")], Some(()), "")]
     fn test_consume_seq(
         #[case] start: &str,
         #[case] tokens: &[Token],
