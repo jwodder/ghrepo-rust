@@ -1,10 +1,7 @@
 #![allow(clippy::items_after_test_module)]
-#[cfg(test)]
-extern crate rstest_reuse;
-
 use ghrepo::{GHRepo, ParseError};
 use rstest::rstest;
-use rstest_reuse::{apply, template};
+use rstest_reuse::{self, apply, template};
 use std::str::FromStr;
 
 #[test]
