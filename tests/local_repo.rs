@@ -1,6 +1,4 @@
-// Use "pub" to silence some "unused code" warnings
-pub mod repomaker;
-
+mod repomaker;
 use ghrepo::{GHRepo, LocalRepo, LocalRepoError};
 use repomaker::RepoMaker;
 use std::env;

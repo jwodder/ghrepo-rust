@@ -1,7 +1,5 @@
 #![cfg(feature = "cli")]
-// Use "pub" to silence some "unused code" warnings
-pub mod repomaker;
-
+mod repomaker;
 use assert_cmd::Command;
 use ghrepo::GHRepo;
 use repomaker::RepoMaker;

@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;
@@ -11,7 +9,6 @@ pub struct RepoMaker {
 }
 
 impl RepoMaker {
-    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         RepoMaker {
             tmpdir: tempdir().unwrap(),
@@ -44,10 +41,14 @@ impl RepoMaker {
         ])
     }
 
+    // Used by local_repo.rs but not cli.rs
+    #[allow(unused)]
     pub fn set_upstream(&self, branch: &str, remote: &str) {
         self.run(&["config", &format!("branch.{branch}.remote"), remote])
     }
 
+    // Used by local_repo.rs but not cli.rs
+    #[allow(unused)]
     pub fn detach(&self) {
         fs::write(self.path().join("file.txt"), b"This is test text\n").unwrap();
         self.run(&["add", "file.txt"]);
