@@ -79,7 +79,7 @@ pub enum ParseError {
 }
 
 impl fmt::Display for ParseError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ParseError::InvalidSpec(s) => write!(f, "invalid GitHub repository spec: {s:?}"),
             ParseError::InvalidOwner(s) => write!(f, "invalid GitHub repository owner: {s:?}"),
@@ -277,7 +277,7 @@ impl GHRepo {
 }
 
 impl fmt::Display for GHRepo {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}/{}", self.owner, self.name)
     }
 }
@@ -321,10 +321,10 @@ impl<'de> Deserialize<'de> for GHRepo {
     {
         struct GHRepoVisitor;
 
-        impl<'de> Visitor<'de> for GHRepoVisitor {
+        impl Visitor<'_> for GHRepoVisitor {
             type Value = GHRepo;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str(
                     "a GitHub repository of the form OWNER/NAME or a GitHub repository URL",
                 )
@@ -515,7 +515,7 @@ pub enum LocalRepoError {
 }
 
 impl fmt::Display for LocalRepoError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             LocalRepoError::CouldNotExecute(e) => {
                 write!(f, "failed to execute Git command: {e}")

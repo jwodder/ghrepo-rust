@@ -177,7 +177,7 @@ impl<'a> PullParser<'a> {
         I: IntoIterator<Item = &'b Token>,
     {
         let orig = self.data;
-        for &t in tokens.into_iter() {
+        for &t in tokens {
             if self.consume(t).is_none() {
                 self.data = orig;
                 return None;

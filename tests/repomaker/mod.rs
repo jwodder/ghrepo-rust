@@ -1,21 +1,22 @@
+#![cfg(test)]
 use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
 use tempfile::{tempdir, TempDir};
 
-pub struct RepoMaker {
+pub(crate) struct RepoMaker {
     tmpdir: TempDir,
 }
 
 impl RepoMaker {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         RepoMaker {
             tmpdir: tempdir().unwrap(),
         }
     }
 
-    pub fn path(&self) -> &Path {
+    pub(crate) fn path(&self) -> &Path {
         self.tmpdir.path()
     }
 
@@ -28,28 +29,28 @@ impl RepoMaker {
         assert!(r.success());
     }
 
-    pub fn init(&self, branch: &str) {
-        self.run(&["-c", &format!("init.defaultBranch={branch}"), "init"])
+    pub(crate) fn init(&self, branch: &str) {
+        self.run(&["-c", &format!("init.defaultBranch={branch}"), "init"]);
     }
 
-    pub fn add_remote<S: AsRef<OsStr>>(&self, remote: &str, url: S) {
+    pub(crate) fn add_remote<S: AsRef<OsStr>>(&self, remote: &str, url: S) {
         self.run(&[
             "remote".as_ref(),
             "add".as_ref(),
             remote.as_ref(),
             url.as_ref(),
-        ])
+        ]);
     }
 
     // Used by local_repo.rs but not cli.rs
     #[allow(unused)]
-    pub fn set_upstream(&self, branch: &str, remote: &str) {
-        self.run(&["config", &format!("branch.{branch}.remote"), remote])
+    pub(crate) fn set_upstream(&self, branch: &str, remote: &str) {
+        self.run(&["config", &format!("branch.{branch}.remote"), remote]);
     }
 
     // Used by local_repo.rs but not cli.rs
     #[allow(unused)]
-    pub fn detach(&self) {
+    pub(crate) fn detach(&self) {
         fs::write(self.path().join("file.txt"), b"This is test text\n").unwrap();
         self.run(&["add", "file.txt"]);
         self.run(&["commit", "-m", "Add a file"]);
