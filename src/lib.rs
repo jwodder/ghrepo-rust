@@ -16,7 +16,7 @@
 //!   that you remove it by disabling default features.
 //!
 //! - `serde` — Enables serializing & deserializing the `GHRepo` type with
-//!   [`serde`](https://crates.io/crates/serde)
+//!   [`serde`]
 //!
 //! Example
 //! =======
