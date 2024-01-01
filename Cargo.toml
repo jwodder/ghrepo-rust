@@ -20,8 +20,8 @@ assert_cmd = "2.0.12"
 rstest = { version = "0.18.2", default-features = false }
 rstest_reuse = "0.6.0"
 serde = { version = "1.0.193", features = ["derive"] }
-serde_json = "1.0.108"
-tempfile = "3.8.1"
+serde_json = "1.0.109"
+tempfile = "3.9.0"
 which = "5.0.0"
 
 [features]
