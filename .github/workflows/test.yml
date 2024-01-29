@@ -73,7 +73,6 @@ jobs:
       - name: Build crate
         run: |
           cargo hack \
-            --optional-deps \
             --feature-powerset \
             --exclude-features default \
             build --all-targets --verbose
@@ -81,7 +80,6 @@ jobs:
       - name: Test crate
         run: |
           cargo hack \
-            --optional-deps \
             --feature-powerset \
             --exclude-features default \
             test --verbose
@@ -146,7 +144,6 @@ jobs:
       - name: Check code
         run: |
           cargo hack \
-            --optional-deps \
             --feature-powerset \
             --exclude-features default \
             clippy --all-targets -- -Dwarnings

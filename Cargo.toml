@@ -27,6 +27,7 @@ which = "6.0.0"
 [features]
 default = ["cli"]
 cli = ["dep:lexopt"]
+serde = ["dep:serde"]
 
 [[bin]]
 name = "ghrepo"
