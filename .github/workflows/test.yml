@@ -72,17 +72,11 @@ jobs:
 
       - name: Build crate
         run: |
-          cargo hack \
-            --feature-powerset \
-            --exclude-features default \
-            build --all-targets --verbose
+          cargo hack --feature-powerset build --all-targets --verbose
 
       - name: Test crate
         run: |
-          cargo hack \
-            --feature-powerset \
-            --exclude-features default \
-            test --verbose
+          cargo hack --feature-powerset test --verbose
 
   coverage:
     # This is separate from the main tests because cargo-llvm-cov doesn't run
@@ -143,10 +137,7 @@ jobs:
 
       - name: Check code
         run: |
-          cargo hack \
-            --feature-powerset \
-            --exclude-features default \
-            clippy --all-targets -- -Dwarnings
+          cargo hack --feature-powerset clippy --all-targets -- -Dwarnings
 
       - name: Check formatting
         run: cargo fmt --check
