@@ -240,6 +240,11 @@ impl GHRepo {
         }
     }
 
+    /// Convert to a reference to a string of the form `{owner}/{name}`
+    pub fn as_str(&self) -> &str {
+        &self.fullname
+    }
+
     /// Returns the base URL for accessing the repository via the GitHub REST
     /// API; this is a string of the form
     /// `https://api.github.com/repos/{owner}/{name}`.

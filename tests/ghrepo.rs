@@ -30,6 +30,7 @@ fn test_misc_traits() {
     let s: &str = &r;
     assert_eq!(s, "octocat/repository");
     assert_eq!(r.as_ref(), "octocat/repository");
+    assert_eq!(r.as_str(), "octocat/repository");
     assert_eq!(r, "octocat/repository");
     let s2 = String::from(r);
     assert_eq!(s2, "octocat/repository");

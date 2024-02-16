@@ -13,6 +13,7 @@ v0.6.0 (in development)
     - `PartialOrd<&'_ str>`
     - `PartialOrd<str>`
     - `TryFrom<String>`
+- Added `GHRepo::as_str()` method
 
 v0.5.0 (2023-04-27)
 -------------------
