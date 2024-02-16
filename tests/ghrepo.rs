@@ -452,3 +452,17 @@ fn test_new_bad_repo() {
         Err(ParseError::InvalidName(String::from("repo.git")))
     );
 }
+
+#[rstest]
+#[case("Zoctocat/hello-world", "octocat/hello-world")]
+#[case("n/z", "octocat/hello-world")]
+#[case("octoca-t/hello-world", "octocat/hello-world")]
+#[case("octocat/Zello-world", "octocat/hello-world")]
+#[case("octocat/hello-world", "octocat/repository")]
+#[case("octocat/hello-world", "p/a")]
+fn test_ord(#[case] lesser: &str, #[case] greater: &str) {
+    let lesser_repo = GHRepo::from_str(lesser).unwrap();
+    let greater_repo = GHRepo::from_str(greater).unwrap();
+    assert!(lesser_repo < greater_repo);
+    assert!(lesser_repo < greater);
+}

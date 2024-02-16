@@ -43,6 +43,7 @@
 
 mod parser;
 use crate::parser::{parse_github_url, split_name, split_owner, split_owner_name};
+use std::cmp::Ordering;
 use std::env;
 use std::error;
 use std::fmt;
@@ -111,7 +112,7 @@ impl error::Error for ParseError {}
 /// deserialized with the `serde` library.  Serialization produces a string of
 /// the form `{owner}/{name}`, and deserialization accepts any string of a form
 /// accepted by [`GHRepo::from_str`].
-#[derive(Clone, Eq, Hash, PartialEq)]
+#[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct GHRepo {
     fullname: String,
     slash_pos: usize,
@@ -316,6 +317,22 @@ impl<'a> PartialEq<&'a str> for GHRepo {
     /// `{owner}/{name}`
     fn eq(&self, other: &&'a str) -> bool {
         &self.fullname == other
+    }
+}
+
+impl PartialOrd<str> for GHRepo {
+    /// Compare the repository as though it were a string of the form
+    /// `{owner}/{name}`
+    fn partial_cmp(&self, other: &str) -> Option<Ordering> {
+        Some((*self.fullname).cmp(other))
+    }
+}
+
+impl<'a> PartialOrd<&'a str> for GHRepo {
+    /// Compare the repository as though it were a string of the form
+    /// `{owner}/{name}`
+    fn partial_cmp(&self, other: &&'a str) -> Option<Ordering> {
+        Some((*self.fullname).cmp(other))
     }
 }
 
