@@ -5,6 +5,13 @@ use rstest_reuse::{self, apply, template};
 use std::str::FromStr;
 
 #[test]
+fn test_parts() {
+    let r = GHRepo::new("octocat", "repository").unwrap();
+    assert_eq!(r.owner(), "octocat");
+    assert_eq!(r.name(), "repository");
+}
+
+#[test]
 fn test_to_string() {
     let r = GHRepo::new("octocat", "repository").unwrap();
     assert_eq!(r.to_string(), "octocat/repository");
