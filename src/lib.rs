@@ -41,6 +41,7 @@
 //! # }
 //! ```
 
+mod deser;
 mod parser;
 use crate::parser::{parse_github_url, split_name, split_owner, split_owner_name};
 use std::cmp::Ordering;
@@ -51,13 +52,6 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
 use std::str::{self, FromStr};
-
-#[cfg(feature = "serde")]
-use serde::de::{Deserializer, Unexpected, Visitor};
-#[cfg(feature = "serde")]
-use serde::ser::Serializer;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 /// Error returned when trying to construct a [`GHRepo`] with invalid arguments
 /// or parse an invalid repository spec
@@ -353,49 +347,6 @@ impl TryFrom<String> for GHRepo {
             }
             _ => Err(ParseError::InvalidSpec(s)),
         }
-    }
-}
-
-#[cfg(feature = "serde")]
-#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
-impl Serialize for GHRepo {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_str(&self.fullname)
-    }
-}
-
-#[cfg(feature = "serde")]
-#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
-impl<'de> Deserialize<'de> for GHRepo {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct GHRepoVisitor;
-
-        impl Visitor<'_> for GHRepoVisitor {
-            type Value = GHRepo;
-
-            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-                formatter.write_str(
-                    "a GitHub repository of the form OWNER/NAME or a GitHub repository URL",
-                )
-            }
-
-            fn visit_str<E>(self, input: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                input
-                    .parse::<GHRepo>()
-                    .map_err(|_| E::invalid_value(Unexpected::Str(input), &self))
-            }
-        }
-
-        deserializer.deserialize_str(GHRepoVisitor)
     }
 }
 
