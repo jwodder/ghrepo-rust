@@ -91,7 +91,9 @@ impl fmt::Display for ParseError {
 
 impl error::Error for ParseError {}
 
-/// A container for a GitHub repository's owner and base name.
+/// A container for a GitHub repository spec, consisting of a repository
+/// *owner* and a repository *name* (sometimes also called the "repo"
+/// component).
 ///
 /// A `GHRepo` instance can be constructed in the following ways:
 ///
@@ -105,8 +107,9 @@ impl error::Error for ParseError {}
 ///   repository name with the owner defaulting to a given value with
 ///   [`GHRepo::from_str_with_owner()`]
 ///
-/// Displaying a `GHRepo` instance produces a repository "fullname" of the form
-/// `{owner}/{name}`.
+/// Comparisons and conversions to strings all treat `GHRepo` instances as
+/// strings of the form `{owner}/{name}` (sometimes called the repository's
+/// "full name").
 ///
 /// When the `serde` feature is enabled, `GHRepo` instances can be serialized &
 /// deserialized with the `serde` library.  Serialization produces a string of
