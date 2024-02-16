@@ -43,6 +43,7 @@
 
 mod parser;
 use crate::parser::{parse_github_url, split_name, split_owner, split_owner_name};
+use std::cmp::Ordering;
 use std::env;
 use std::error;
 use std::fmt;
@@ -62,10 +63,10 @@ use serde::{Deserialize, Serialize};
 /// or parse an invalid repository spec
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ParseError {
-    /// Returned by [`GHRepo::from_str`], [`GHRepo::from_url`], or
-    /// [`GHRepo::from_str_with_owner`] if given a string that is not a valid
-    /// GitHub repository URL or specifier; the field is the string in
-    /// question.
+    /// Returned by [`GHRepo::from_str`], [`GHRepo::from_url`],
+    /// [`GHRepo::from_str_with_owner`], or the `TryFrom<String> for GHRepo`
+    /// impl if given a string that is not a valid GitHub repository URL or
+    /// specifier; the field is the string in question.
     InvalidSpec(String),
 
     /// Returned by [`GHRepo::new`] or [`GHRepo::from_str_with_owner`] if given
@@ -90,11 +91,15 @@ impl fmt::Display for ParseError {
 
 impl error::Error for ParseError {}
 
-/// A container for a GitHub repository's owner and base name.
+/// A container for a GitHub repository spec, consisting of a repository
+/// *owner* and a repository *name* (sometimes also called the "repo"
+/// component).
 ///
 /// A `GHRepo` instance can be constructed in the following ways:
 ///
 /// - From an owner and name with [`GHRepo::new()`]
+/// - From a [`String`] of the form `{owner}/{name}` via the `TryFrom<String>`
+///   trait
 /// - From a GitHub URL with [`GHRepo::from_url()`]
 /// - From a GitHub URL or a string of the form `{owner}/{name}` with
 ///   [`GHRepo::from_str`]
@@ -102,17 +107,18 @@ impl error::Error for ParseError {}
 ///   repository name with the owner defaulting to a given value with
 ///   [`GHRepo::from_str_with_owner()`]
 ///
-/// Displaying a `GHRepo` instance produces a repository "fullname" of the form
-/// `{owner}/{name}`.
+/// Comparisons and conversions to strings all treat `GHRepo` instances as
+/// strings of the form `{owner}/{name}` (sometimes called the repository's
+/// "full name").
 ///
 /// When the `serde` feature is enabled, `GHRepo` instances can be serialized &
 /// deserialized with the `serde` library.  Serialization produces a string of
 /// the form `{owner}/{name}`, and deserialization accepts any string of a form
 /// accepted by [`GHRepo::from_str`].
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct GHRepo {
-    owner: String,
-    name: String,
+    fullname: String,
+    slash_pos: usize,
 }
 
 impl GHRepo {
@@ -129,8 +135,8 @@ impl GHRepo {
             Err(ParseError::InvalidName(name.to_string()))
         } else {
             Ok(GHRepo {
-                owner: owner.to_string(),
-                name: name.to_string(),
+                fullname: format!("{owner}/{name}"),
+                slash_pos: owner.len(),
             })
         }
     }
@@ -220,43 +226,54 @@ impl GHRepo {
 
     /// Retrieve the repository's owner's name
     pub fn owner(&self) -> &str {
-        &self.owner
+        match self.fullname.get(..self.slash_pos) {
+            Some(s) => s,
+            None => unreachable!("slash_pos should be valid char index"),
+        }
     }
 
     /// Retrieve the repository's base name
     pub fn name(&self) -> &str {
-        &self.name
+        match self.fullname.get(self.slash_pos + 1..) {
+            Some(s) => s,
+            None => unreachable!("slash_pos + 1 should be valid char index"),
+        }
+    }
+
+    /// Convert to a reference to a string of the form `{owner}/{name}`
+    pub fn as_str(&self) -> &str {
+        &self.fullname
     }
 
     /// Returns the base URL for accessing the repository via the GitHub REST
     /// API; this is a string of the form
     /// `https://api.github.com/repos/{owner}/{name}`.
     pub fn api_url(&self) -> String {
-        format!("https://api.github.com/repos/{}/{}", self.owner, self.name)
+        format!("https://api.github.com/repos/{}", self.fullname)
     }
 
     /// Returns the URL for cloning the repository over HTTPS
     pub fn clone_url(&self) -> String {
-        format!("https://github.com/{}/{}.git", self.owner, self.name)
+        format!("https://github.com/{}.git", self.fullname)
     }
 
     /// Returns the URL for cloning the repository via the native Git protocol
     pub fn git_url(&self) -> String {
-        format!("git://github.com/{}/{}.git", self.owner, self.name)
+        format!("git://github.com/{}.git", self.fullname)
     }
 
     /// Returns the URL for the repository's web interface
     pub fn html_url(&self) -> String {
-        format!("https://github.com/{}/{}", self.owner, self.name)
+        format!("https://github.com/{}", self.fullname)
     }
 
     /// Returns the URL for cloning the repository over SSH
     pub fn ssh_url(&self) -> String {
-        format!("git@github.com:{}/{}.git", self.owner, self.name)
+        format!("git@github.com:{}.git", self.fullname)
     }
 
-    /// Parse a GitHub repository URL.  The following URL formats are
-    /// recognized:
+    /// Parse a repository from a GitHub repository URL.  The following URL
+    /// formats are recognized:
     ///
     /// - `[http[s]://[<username>[:<password>]@]][www.]github.com/<owner>/<name>[.git][/]`
     /// - `[http[s]://]api.github.com/repos/<owner>/<name>`
@@ -276,9 +293,70 @@ impl GHRepo {
     }
 }
 
+impl From<GHRepo> for String {
+    /// Convert the repository to a string of the form `{owner}/{name}`
+    fn from(value: GHRepo) -> String {
+        value.fullname
+    }
+}
+
+impl fmt::Debug for GHRepo {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.fullname)
+    }
+}
+
 impl fmt::Display for GHRepo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}/{}", self.owner, self.name)
+        f.write_str(&self.fullname)
+    }
+}
+
+impl PartialEq<str> for GHRepo {
+    /// Compare the repository as though it were a string of the form
+    /// `{owner}/{name}`
+    fn eq(&self, other: &str) -> bool {
+        self.fullname == other
+    }
+}
+
+impl<'a> PartialEq<&'a str> for GHRepo {
+    /// Compare the repository as though it were a string of the form
+    /// `{owner}/{name}`
+    fn eq(&self, other: &&'a str) -> bool {
+        &self.fullname == other
+    }
+}
+
+impl PartialOrd<str> for GHRepo {
+    /// Compare the repository as though it were a string of the form
+    /// `{owner}/{name}`
+    fn partial_cmp(&self, other: &str) -> Option<Ordering> {
+        Some((*self.fullname).cmp(other))
+    }
+}
+
+impl<'a> PartialOrd<&'a str> for GHRepo {
+    /// Compare the repository as though it were a string of the form
+    /// `{owner}/{name}`
+    fn partial_cmp(&self, other: &&'a str) -> Option<Ordering> {
+        Some((*self.fullname).cmp(other))
+    }
+}
+
+impl std::ops::Deref for GHRepo {
+    type Target = str;
+
+    /// Dereference to a string of the form `{owner}/{name}`
+    fn deref(&self) -> &str {
+        &self.fullname
+    }
+}
+
+impl AsRef<str> for GHRepo {
+    /// Convert to a reference to a string of the form `{owner}/{name}`
+    fn as_ref(&self) -> &str {
+        &self.fullname
     }
 }
 
@@ -295,8 +373,36 @@ impl FromStr for GHRepo {
     /// specifier
     fn from_str(s: &str) -> Result<Self, ParseError> {
         match split_owner_name(s) {
-            Some((owner, name, "")) => GHRepo::new(owner, name),
+            Some((owner, _name, "")) => Ok(GHRepo {
+                fullname: s.to_owned(),
+                slash_pos: owner.len(),
+            }),
             _ => GHRepo::from_url(s),
+        }
+    }
+}
+
+impl TryFrom<String> for GHRepo {
+    type Error = ParseError;
+
+    /// Construct a `GHRepo` from a `String` of the form `{owner}/{name}`.
+    ///
+    /// Note that, unlike [`GHRepo::from_str()`], this trait does not accept
+    /// repository URLs.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`ParseError`] if `s` is not a valid repository specifier
+    fn try_from(s: String) -> Result<Self, ParseError> {
+        match split_owner_name(&s) {
+            Some((owner, _name, "")) => {
+                let slash_pos = owner.len();
+                Ok(GHRepo {
+                    fullname: s,
+                    slash_pos,
+                })
+            }
+            _ => Err(ParseError::InvalidSpec(s)),
         }
     }
 }
@@ -308,7 +414,7 @@ impl Serialize for GHRepo {
     where
         S: Serializer,
     {
-        serializer.collect_str(self)
+        serializer.serialize_str(&self.fullname)
     }
 }
 

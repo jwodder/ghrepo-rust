@@ -3,6 +3,17 @@ v0.6.0 (in development)
 - Remove library installation instructions from README
 - List all features in the library documentation
 - Increased MSRV to 1.70
+- `GHRepo` now implements the following traits:
+    - `AsRef<str>`
+    - `Deref<Target=str>`
+    - `From<GHRepo> for String`
+    - `Ord`
+    - `PartialEq<&'_ str>`
+    - `PartialEq<str>`
+    - `PartialOrd<&'_ str>`
+    - `PartialOrd<str>`
+    - `TryFrom<String>`
+- Added `GHRepo::as_str()` method
 
 v0.5.0 (2023-04-27)
 -------------------

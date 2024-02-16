@@ -5,9 +5,35 @@ use rstest_reuse::{self, apply, template};
 use std::str::FromStr;
 
 #[test]
+fn test_parts() {
+    let r = GHRepo::new("octocat", "repository").unwrap();
+    assert_eq!(r.owner(), "octocat");
+    assert_eq!(r.name(), "repository");
+}
+
+#[test]
 fn test_to_string() {
     let r = GHRepo::new("octocat", "repository").unwrap();
     assert_eq!(r.to_string(), "octocat/repository");
+}
+
+#[test]
+fn test_debug() {
+    let r = GHRepo::new("octocat", "repository").unwrap();
+    assert_eq!(format!("{r:?}"), r#""octocat/repository""#);
+    assert_eq!(format!("{r:#?}"), r#""octocat/repository""#);
+}
+
+#[test]
+fn test_misc_traits() {
+    let r = GHRepo::new("octocat", "repository").unwrap();
+    let s: &str = &r;
+    assert_eq!(s, "octocat/repository");
+    assert_eq!(r.as_ref(), "octocat/repository");
+    assert_eq!(r.as_str(), "octocat/repository");
+    assert_eq!(r, "octocat/repository");
+    let s2 = String::from(r);
+    assert_eq!(s2, "octocat/repository");
 }
 
 #[test]
@@ -309,9 +335,80 @@ fn test_from_str(#[case] spec: &str, #[case] owner: &str, #[case] name: &str) {
     assert_eq!(GHRepo::from_str(spec), Ok(r));
 }
 
+#[rstest]
+#[case("jwodder/headerparser", "jwodder", "headerparser")]
+#[case("jwodder/none", "jwodder", "none")]
+#[case("nonely/headerparser", "nonely", "headerparser")]
+#[case("none-none/headerparser", "none-none", "headerparser")]
+#[case("nonenone/headerparser", "nonenone", "headerparser")]
+fn test_try_from_string(#[case] spec: String, #[case] owner: &str, #[case] name: &str) {
+    let r = GHRepo::try_from(spec).unwrap();
+    assert_eq!(r.owner(), owner);
+    assert_eq!(r.name(), name);
+}
+
 #[apply(bad_repos)]
 fn test_from_bad_str(#[case] spec: &str) {
     match GHRepo::from_str(spec) {
+        Err(ParseError::InvalidSpec(s)) if s == spec => (),
+        e => panic!("Got wrong result: {e:?}"),
+    }
+}
+
+#[apply(bad_repos)]
+#[case("git://github.com/jwodder/headerparser")]
+#[case("git://github.com/jwodder/headerparser.git")]
+#[case("git@github.com:jwodder/headerparser")]
+#[case("git@github.com:jwodder/headerparser.git")]
+#[case("GIT://GitHub.COM/jwodder/headerparser")]
+#[case("git@github.com:joe-q-coder/my.repo.git")]
+#[case("git@GITHUB.com:joe-q-coder/my.repo.git")]
+#[case("ssh://git@github.com/jwodder/headerparser")]
+#[case("ssh://git@github.com/jwodder/headerparser.git")]
+#[case("ssh://git@github.com/-/test")]
+#[case("SSH://git@GITHUB.COM/-/test")]
+#[case("https://api.github.com/repos/jwodder/headerparser")]
+#[case("http://api.github.com/repos/jwodder/headerparser")]
+#[case("api.github.com/repos/jwodder/headerparser")]
+#[case("https://api.github.com/repos/none-/-none")]
+#[case("HttpS://api.github.com/repos/none-/-none")]
+#[case("http://api.github.com/repos/none-/-none")]
+#[case("Http://api.github.com/repos/none-/-none")]
+#[case("Api.GitHub.Com/repos/jwodder/headerparser")]
+#[case("https://github.com/jwodder/headerparser")]
+#[case("https://github.com/jwodder/headerparser.git")]
+#[case("https://github.com/jwodder/headerparser.git/")]
+#[case("https://github.com/jwodder/headerparser/")]
+#[case("https://www.github.com/jwodder/headerparser")]
+#[case("http://github.com/jwodder/headerparser")]
+#[case("http://www.github.com/jwodder/headerparser")]
+#[case("github.com/jwodder/headerparser")]
+#[case("github.com/jwodder/headerparser.git")]
+#[case("github.com/jwodder/headerparser.git/")]
+#[case("github.com/jwodder/headerparser/")]
+#[case("www.github.com/jwodder/headerparser")]
+#[case("https://github.com/jwodder/none.git")]
+#[case("https://github.com/joe-coder/hello.world")]
+#[case("http://github.com/joe-coder/hello.world")]
+#[case("HTTPS://GITHUB.COM/joe-coder/hello.world")]
+#[case("HTTPS://WWW.GITHUB.COM/joe-coder/hello.world")]
+#[case("https://github.com/-Jerry-/geshi-1.0.git")]
+#[case("https://github.com/-Jerry-/geshi-1.0.git/")]
+#[case("https://github.com/-Jerry-/geshi-1.0/")]
+#[case("https://www.github.com/-Jerry-/geshi-1.0")]
+#[case("github.com/-Jerry-/geshi-1.0")]
+#[case("https://x-access-token:1234567890@github.com/octocat/Hello-World")]
+#[case("https://my.username@github.com/octocat/Hello-World")]
+#[case("https://user%20name@github.com/octocat/Hello-World")]
+#[case("https://user+name@github.com/octocat/Hello-World")]
+#[case("https://~user.name@github.com/octocat/Hello-World")]
+#[case("https://@github.com/octocat/Hello-World")]
+#[case("https://user:@github.com/octocat/Hello-World")]
+#[case("https://:pass@github.com/octocat/Hello-World")]
+#[case("https://:@github.com/octocat/Hello-World")]
+#[case("https://user:pass:extra@github.com/octocat/Hello-World")]
+fn test_try_from_bad_string(#[case] spec: String) {
+    match GHRepo::try_from(spec.clone()) {
         Err(ParseError::InvalidSpec(s)) if s == spec => (),
         e => panic!("Got wrong result: {e:?}"),
     }
@@ -355,4 +452,18 @@ fn test_new_bad_repo() {
         GHRepo::new("Noners", "repo.git"),
         Err(ParseError::InvalidName(String::from("repo.git")))
     );
+}
+
+#[rstest]
+#[case("Zoctocat/hello-world", "octocat/hello-world")]
+#[case("n/z", "octocat/hello-world")]
+#[case("octoca-t/hello-world", "octocat/hello-world")]
+#[case("octocat/Zello-world", "octocat/hello-world")]
+#[case("octocat/hello-world", "octocat/repository")]
+#[case("octocat/hello-world", "p/a")]
+fn test_ord(#[case] lesser: &str, #[case] greater: &str) {
+    let lesser_repo = GHRepo::from_str(lesser).unwrap();
+    let greater_repo = GHRepo::from_str(greater).unwrap();
+    assert!(lesser_repo < greater_repo);
+    assert!(lesser_repo < greater);
 }
