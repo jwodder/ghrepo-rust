@@ -14,6 +14,9 @@ v0.6.0 (in development)
     - `PartialOrd<str>`
     - `TryFrom<String>`
 - Added `GHRepo::as_str()` method
+- **Breaking**: The `GHRepo::is_valid_owner()` and `GHRepo::is_valid_name()`
+  methods are now regular functions
+- Added `is_valid_repository()` function
 
 v0.5.0 (2023-04-27)
 -------------------
