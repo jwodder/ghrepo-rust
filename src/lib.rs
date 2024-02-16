@@ -111,8 +111,8 @@ impl error::Error for ParseError {}
 /// accepted by [`GHRepo::from_str`].
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct GHRepo {
-    owner: String,
-    name: String,
+    fullname: String,
+    slash_pos: usize,
 }
 
 impl GHRepo {
@@ -129,8 +129,8 @@ impl GHRepo {
             Err(ParseError::InvalidName(name.to_string()))
         } else {
             Ok(GHRepo {
-                owner: owner.to_string(),
-                name: name.to_string(),
+                fullname: format!("{owner}/{name}"),
+                slash_pos: owner.len(),
             })
         }
     }
@@ -220,39 +220,45 @@ impl GHRepo {
 
     /// Retrieve the repository's owner's name
     pub fn owner(&self) -> &str {
-        &self.owner
+        match self.fullname.get(..self.slash_pos) {
+            Some(s) => s,
+            None => unreachable!("slash_pos should be valid char index"),
+        }
     }
 
     /// Retrieve the repository's base name
     pub fn name(&self) -> &str {
-        &self.name
+        match self.fullname.get(self.slash_pos + 1..) {
+            Some(s) => s,
+            None => unreachable!("slash_pos + 1 should be valid char index"),
+        }
     }
 
     /// Returns the base URL for accessing the repository via the GitHub REST
     /// API; this is a string of the form
     /// `https://api.github.com/repos/{owner}/{name}`.
     pub fn api_url(&self) -> String {
-        format!("https://api.github.com/repos/{}/{}", self.owner, self.name)
+        format!("https://api.github.com/repos/{}", self.fullname)
     }
 
     /// Returns the URL for cloning the repository over HTTPS
     pub fn clone_url(&self) -> String {
-        format!("https://github.com/{}/{}.git", self.owner, self.name)
+        format!("https://github.com/{}.git", self.fullname)
     }
 
     /// Returns the URL for cloning the repository via the native Git protocol
     pub fn git_url(&self) -> String {
-        format!("git://github.com/{}/{}.git", self.owner, self.name)
+        format!("git://github.com/{}.git", self.fullname)
     }
 
     /// Returns the URL for the repository's web interface
     pub fn html_url(&self) -> String {
-        format!("https://github.com/{}/{}", self.owner, self.name)
+        format!("https://github.com/{}", self.fullname)
     }
 
     /// Returns the URL for cloning the repository over SSH
     pub fn ssh_url(&self) -> String {
-        format!("git@github.com:{}/{}.git", self.owner, self.name)
+        format!("git@github.com:{}.git", self.fullname)
     }
 
     /// Parse a GitHub repository URL.  The following URL formats are
@@ -278,7 +284,7 @@ impl GHRepo {
 
 impl fmt::Display for GHRepo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}/{}", self.owner, self.name)
+        write!(f, "{}", self.fullname)
     }
 }
 
