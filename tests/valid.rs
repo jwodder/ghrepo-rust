@@ -1,5 +1,5 @@
 #![allow(clippy::items_after_test_module)]
-use ghrepo::{is_valid_name, is_valid_owner};
+use ghrepo::{is_valid_name, is_valid_owner, is_valid_repository};
 use rstest::rstest;
 
 #[rstest]
@@ -37,6 +37,7 @@ fn test_good_owner(#[case] owner: &str) {
 #[case("steven.universe")]
 #[case("steven-universe@beachcity.dv")]
 #[case("steven-univerß")]
+#[case("steven/universe")]
 #[case("")]
 #[case("none")]
 #[case("NONE")]
@@ -90,6 +91,22 @@ fn test_good_name(#[case] name: &str) {
 #[case("steven.git")]
 #[case("steven.GIT")]
 #[case("steven.Git")]
+#[case("steven/universe")]
 fn test_bad_name(#[case] name: &str) {
     assert!(!is_valid_name(name));
+}
+
+#[rstest]
+#[case("steven/universe")]
+fn test_good_repository(#[case] spec: &str) {
+    assert!(is_valid_repository(spec));
+}
+
+#[rstest]
+#[case("steven/universe.git")]
+#[case("steven/universe/main")]
+#[case("https://github.com/steven/universe")]
+#[case("steven")]
+fn test_bad_repository(#[case] spec: &str) {
+    assert!(!is_valid_repository(spec));
 }

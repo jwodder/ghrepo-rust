@@ -678,3 +678,18 @@ pub fn is_valid_owner(s: &str) -> bool {
 pub fn is_valid_name(s: &str) -> bool {
     matches!(split_name(s), Some((_, "")))
 }
+
+/// Test whether a string is a valid repository specifier/full name of the form
+/// `{owner}/{name}`.
+///
+/// # Example
+///
+/// ```
+/// # use ghrepo::is_valid_repository;
+/// assert!(is_valid_repository("octocat/my-repo"));
+/// assert!(!is_valid_repository("octocat/my-repo.git"));
+/// assert!(!is_valid_repository("my-repo"));
+/// ```
+pub fn is_valid_repository(s: &str) -> bool {
+    matches!(split_owner_name(s), Some((_, _, "")))
+}
