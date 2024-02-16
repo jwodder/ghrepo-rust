@@ -129,9 +129,9 @@ impl GHRepo {
     /// If `owner` is not a valid GitHub owner name, or if `name` is not a
     /// valid GitHub repository name, returns [`ParseError`].
     pub fn new(owner: &str, name: &str) -> Result<Self, ParseError> {
-        if !GHRepo::is_valid_owner(owner) {
+        if !is_valid_owner(owner) {
             Err(ParseError::InvalidOwner(owner.to_string()))
-        } else if !GHRepo::is_valid_name(name) {
+        } else if !is_valid_name(name) {
             Err(ParseError::InvalidName(name.to_string()))
         } else {
             Ok(GHRepo {
@@ -139,57 +139,6 @@ impl GHRepo {
                 slash_pos: owner.len(),
             })
         }
-    }
-
-    /// Test whether a string is a valid GitHub user login or organization
-    /// name.
-    ///
-    /// As of 2017-07-23, trying to sign up to GitHub with an invalid username
-    /// or create an organization with an invalid name gives the message
-    /// "Username may only contain alphanumeric characters or single hyphens,
-    /// and cannot begin or end with a hyphen".  Additionally, trying to create
-    /// a user named "none" (case insensitive) gives the message "Username name
-    /// 'none' is a reserved word."  Unfortunately, there are a number of users
-    /// who made accounts before the current name restrictions were put in
-    /// place, and so this method also needs to accept names that contain
-    /// underscores, contain multiple consecutive hyphens, begin with a hyphen,
-    /// and/or end with a hyphen.
-    ///
-    /// As this function endeavors to accept all usernames that were valid at
-    /// any point, just because a name is accepted doesn't necessarily mean you
-    /// can create a user by that name on GitHub today.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use ghrepo::GHRepo;
-    /// assert!(GHRepo::is_valid_owner("octocat"));
-    /// assert!(GHRepo::is_valid_owner("octo-cat"));
-    /// assert!(!GHRepo::is_valid_owner("octo.cat"));
-    /// assert!(!GHRepo::is_valid_owner("octocat/repository"));
-    /// assert!(!GHRepo::is_valid_owner("none"));
-    /// ```
-    pub fn is_valid_owner(s: &str) -> bool {
-        matches!(split_owner(s), Some((_, "")))
-    }
-
-    /// Test whether a string is a valid repository name.
-    ///
-    /// Testing as of 2017-05-21 indicates that repository names can be
-    /// composed of alphanumeric ASCII characters, hyphens, periods, and/or
-    /// underscores, with the names `.` and `..` being reserved and names
-    /// ending with `.git` (case insensitive) forbidden.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use ghrepo::GHRepo;
-    /// assert!(GHRepo::is_valid_name("my-repo"));
-    /// assert!(!GHRepo::is_valid_name("my-repo.git"));
-    /// assert!(!GHRepo::is_valid_owner("octocat/my-repo"));
-    /// ```
-    pub fn is_valid_name(s: &str) -> bool {
-        matches!(split_name(s), Some((_, "")))
     }
 
     /// Like [`GHRepo::from_str()`], except that if `s` is just a repository
@@ -217,7 +166,7 @@ impl GHRepo {
     /// # }
     /// ```
     pub fn from_str_with_owner(s: &str, owner: &str) -> Result<Self, ParseError> {
-        if GHRepo::is_valid_name(s) {
+        if is_valid_name(s) {
             GHRepo::new(owner, s)
         } else {
             GHRepo::from_str(s)
@@ -679,4 +628,53 @@ impl From<ParseError> for LocalRepoError {
     fn from(e: ParseError) -> LocalRepoError {
         LocalRepoError::InvalidRemoteURL(e)
     }
+}
+
+/// Test whether a string is a valid GitHub user login or organization name.
+///
+/// As of 2017-07-23, trying to sign up to GitHub with an invalid username or
+/// create an organization with an invalid name gives the message "Username may
+/// only contain alphanumeric characters or single hyphens, and cannot begin or
+/// end with a hyphen".  Additionally, trying to create a user named "none"
+/// (case insensitive) gives the message "Username name 'none' is a reserved
+/// word."  Unfortunately, there are a number of users who made accounts before
+/// the current name restrictions were put in place, and so this method also
+/// needs to accept names that contain underscores, contain multiple
+/// consecutive hyphens, begin with a hyphen, and/or end with a hyphen.
+///
+/// As this function endeavors to accept all usernames that were valid at any
+/// point, just because a name is accepted doesn't necessarily mean you can
+/// create a user by that name on GitHub today.
+///
+/// # Example
+///
+/// ```
+/// # use ghrepo::is_valid_owner;
+/// assert!(is_valid_owner("octocat"));
+/// assert!(is_valid_owner("octo-cat"));
+/// assert!(!is_valid_owner("octo.cat"));
+/// assert!(!is_valid_owner("octocat/repository"));
+/// assert!(!is_valid_owner("none"));
+/// ```
+pub fn is_valid_owner(s: &str) -> bool {
+    matches!(split_owner(s), Some((_, "")))
+}
+
+/// Test whether a string is a valid repository name.
+///
+/// Testing as of 2017-05-21 indicates that repository names can be composed of
+/// alphanumeric ASCII characters, hyphens, periods, and/or underscores, with
+/// the names `.` and `..` being reserved and names ending with `.git` (case
+/// insensitive) forbidden.
+///
+/// # Example
+///
+/// ```
+/// # use ghrepo::is_valid_name;
+/// assert!(is_valid_name("my-repo"));
+/// assert!(!is_valid_name("my-repo.git"));
+/// assert!(!is_valid_name("octocat/my-repo"));
+/// ```
+pub fn is_valid_name(s: &str) -> bool {
+    matches!(split_name(s), Some((_, "")))
 }
