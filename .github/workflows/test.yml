@@ -64,7 +64,7 @@ jobs:
           toolchain: ${{ steps.minimal-version.outputs.msrv }}
 
       - name: Activate cache
-        if: "!startsWith(github.head_ref, 'dependabot/')"
+        if: "!startsWith(github.head_ref, 'renovate/')"
         uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-hack
@@ -99,7 +99,7 @@ jobs:
           components: llvm-tools
 
       - name: Activate cache
-        if: "!startsWith(github.head_ref, 'dependabot/')"
+        if: "!startsWith(github.head_ref, 'renovate/')"
         uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-llvm-cov
@@ -130,7 +130,7 @@ jobs:
           components: clippy, rustfmt
 
       - name: Activate cache
-        if: "!startsWith(github.head_ref, 'dependabot/')"
+        if: "!startsWith(github.head_ref, 'renovate/')"
         uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-hack
@@ -155,7 +155,7 @@ jobs:
           toolchain: nightly
 
       - name: Activate cache
-        if: "!startsWith(github.head_ref, 'dependabot/')"
+        if: "!startsWith(github.head_ref, 'renovate/')"
         uses: Swatinem/rust-cache@v2
 
       - name: Check docs
