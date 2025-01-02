@@ -107,10 +107,10 @@ jobs:
           tool: cargo-hack,cargo-minimal-versions
 
       - name: Build crate
-        run: cargo minimal-versions --direct --feature-powerset build --all-targets --verbose
+        run: cargo minimal-versions --direct --workspace --feature-powerset build --all-targets --verbose
 
       - name: Test crate
-        run: cargo minimal-versions --direct --feature-powerset test --verbose
+        run: cargo minimal-versions --direct --workspace --feature-powerset test --verbose
 
   coverage:
     # This is separate from the main tests because cargo-llvm-cov doesn't run
