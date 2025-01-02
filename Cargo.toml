@@ -1,43 +1,15 @@
-[package]
-name = "ghrepo"
-version = "0.7.0-dev"
+[workspace]
+members = ["crates/*"]
+resolver = "2"
+
+[workspace.package]
 edition = "2021"
 rust-version = "1.74"
-description = "Parse & construct GitHub repository URLs & specifiers"
 authors = ["John Thorvald Wodder II <ghrepo@varonathe.org>"]
 repository = "https://github.com/jwodder/ghrepo-rust"
 license = "MIT"
-keywords = ["GitHub", "URL-parsing", "repository"]
-categories = ["command-line-utilities"]
-exclude = ["/.*"]
 
-[dependencies]
-lexopt = { version = "0.3.0", optional = true }
-serde = { version = "1.0.200", optional = true }
-
-[dev-dependencies]
-assert_cmd = "2.0.14"
-rstest = { version = "0.23.0", default-features = false }
-rstest_reuse = "0.7.0"
-serde = { version = "1.0.200", features = ["derive"] }
-serde_json = "1.0.116"
-tempfile = "3.10.1"
-which = "7.0.0"
-
-[features]
-default = ["cli"]
-cli = ["dep:lexopt"]
-serde = ["dep:serde"]
-
-[[bin]]
-name = "ghrepo"
-required-features = ["cli"]
-
-[package.metadata.docs.rs]
-all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
-
-[lints.rust]
+[workspace.lints.rust]
 # Lint groups:
 future_incompatible = { level = "deny", priority = -1 }
 refining_impl_trait = { level = "deny", priority = -1 }
@@ -116,7 +88,7 @@ unused_comparisons = "deny"
 useless_ptr_null_checks = "deny"
 while_true = "deny"
 
-[lints.rustdoc]
+[workspace.lints.rustdoc]
 bare_urls = "deny"
 broken_intra_doc_links = "deny"
 invalid_codeblock_attributes = "deny"
@@ -126,7 +98,7 @@ private_intra_doc_links = "deny"
 redundant_explicit_links = "deny"
 unescaped_backticks = "deny"
 
-[lints.clippy]
+[workspace.lints.clippy]
 # Deny all warn-by-default lints:
 all = { level = "deny", priority = -1 }
 

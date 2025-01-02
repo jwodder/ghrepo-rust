@@ -1,5 +1,3 @@
-#![cfg(feature = "cli")]
-mod repomaker;
 use assert_cmd::Command;
 use ghrepo::GHRepo;
 use repomaker::RepoMaker;
@@ -12,9 +10,9 @@ fn test_run() {
         return;
     }
     let repo = GHRepo::new("octocat", "repository").unwrap();
-    let maker = RepoMaker::new();
-    maker.init("trunk");
-    maker.add_remote("origin", repo.ssh_url());
+    let maker = RepoMaker::new().unwrap();
+    maker.init("trunk").unwrap();
+    maker.add_remote("origin", repo.ssh_url()).unwrap();
     Command::cargo_bin("ghrepo")
         .unwrap()
         .arg(maker.path())
@@ -29,9 +27,9 @@ fn test_run_noarg() {
         return;
     }
     let repo = GHRepo::new("octocat", "repository").unwrap();
-    let maker = RepoMaker::new();
-    maker.init("trunk");
-    maker.add_remote("origin", repo.ssh_url());
+    let maker = RepoMaker::new().unwrap();
+    maker.init("trunk").unwrap();
+    maker.add_remote("origin", repo.ssh_url()).unwrap();
     Command::cargo_bin("ghrepo")
         .unwrap()
         .current_dir(maker.path())
@@ -56,9 +54,9 @@ fn test_run_json() {
     \"html_url\": \"https://github.com/octocat/repository\",
     \"ssh_url\": \"git@github.com:octocat/repository.git\"
 }\n";
-    let maker = RepoMaker::new();
-    maker.init("trunk");
-    maker.add_remote("origin", repo.ssh_url());
+    let maker = RepoMaker::new().unwrap();
+    maker.init("trunk").unwrap();
+    maker.add_remote("origin", repo.ssh_url()).unwrap();
     Command::cargo_bin("ghrepo")
         .unwrap()
         .arg("--json")
@@ -84,9 +82,9 @@ fn test_run_json_noarg() {
     \"html_url\": \"https://github.com/octocat/repository\",
     \"ssh_url\": \"git@github.com:octocat/repository.git\"
 }\n";
-    let maker = RepoMaker::new();
-    maker.init("trunk");
-    maker.add_remote("origin", repo.ssh_url());
+    let maker = RepoMaker::new().unwrap();
+    maker.init("trunk").unwrap();
+    maker.add_remote("origin", repo.ssh_url()).unwrap();
     Command::cargo_bin("ghrepo")
         .unwrap()
         .arg("--json")
@@ -103,10 +101,10 @@ fn test_run_remote() {
     }
     let origin = GHRepo::new("octocat", "repository").unwrap();
     let upstream = GHRepo::new("sourcedog", "repository").unwrap();
-    let maker = RepoMaker::new();
-    maker.init("trunk");
-    maker.add_remote("origin", origin.ssh_url());
-    maker.add_remote("upstream", upstream.clone_url());
+    let maker = RepoMaker::new().unwrap();
+    maker.init("trunk").unwrap();
+    maker.add_remote("origin", origin.ssh_url()).unwrap();
+    maker.add_remote("upstream", upstream.clone_url()).unwrap();
     Command::cargo_bin("ghrepo")
         .unwrap()
         .arg("--remote")
@@ -124,10 +122,10 @@ fn test_run_remote_noarg() {
     }
     let origin = GHRepo::new("octocat", "repository").unwrap();
     let upstream = GHRepo::new("sourcedog", "repository").unwrap();
-    let maker = RepoMaker::new();
-    maker.init("trunk");
-    maker.add_remote("origin", origin.ssh_url());
-    maker.add_remote("upstream", upstream.clone_url());
+    let maker = RepoMaker::new().unwrap();
+    maker.init("trunk").unwrap();
+    maker.add_remote("origin", origin.ssh_url()).unwrap();
+    maker.add_remote("upstream", upstream.clone_url()).unwrap();
     Command::cargo_bin("ghrepo")
         .unwrap()
         .arg("--remote")
@@ -158,8 +156,8 @@ fn test_run_no_such_remote() {
     if which("git").is_err() {
         return;
     }
-    let maker = RepoMaker::new();
-    maker.init("trunk");
+    let maker = RepoMaker::new().unwrap();
+    maker.init("trunk").unwrap();
     Command::cargo_bin("ghrepo")
         .unwrap()
         .arg(maker.path())
@@ -174,9 +172,11 @@ fn test_run_invalid_url() {
     if which("git").is_err() {
         return;
     }
-    let maker = RepoMaker::new();
-    maker.init("trunk");
-    maker.add_remote("upstream", "https://git.example.com/repo.git");
+    let maker = RepoMaker::new().unwrap();
+    maker.init("trunk").unwrap();
+    maker
+        .add_remote("upstream", "https://git.example.com/repo.git")
+        .unwrap();
     Command::cargo_bin("ghrepo")
         .unwrap()
         .arg("-rupstream")
