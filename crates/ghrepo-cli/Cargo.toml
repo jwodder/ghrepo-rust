@@ -1,6 +1,6 @@
 [package]
 name = "ghrepo-cli"
-version = "0.7.0-dev"
+version = "0.7.0"
 edition.workspace = true
 rust-version.workspace = true
 description = "Show current GitHub repository"
@@ -11,7 +11,7 @@ keywords = ["GitHub", "URL-parsing", "repository"]
 categories = ["command-line-utilities"]
 
 [dependencies]
-ghrepo = { version = "0.7.0-dev", path = "../ghrepo" }
+ghrepo = { version = "0.7.0", path = "../ghrepo" }
 lexopt = "0.3.0"
 
 [dev-dependencies]
