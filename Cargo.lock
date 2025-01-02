@@ -117,12 +117,23 @@ dependencies = [
 name = "ghrepo"
 version = "0.7.0-dev"
 dependencies = [
- "assert_cmd",
- "lexopt",
+ "repomaker",
  "rstest",
  "rstest_reuse",
  "serde",
  "serde_json",
+ "tempfile",
+ "which",
+]
+
+[[package]]
+name = "ghrepo-cli"
+version = "0.7.0-dev"
+dependencies = [
+ "assert_cmd",
+ "ghrepo",
+ "lexopt",
+ "repomaker",
  "tempfile",
  "which",
 ]
@@ -287,6 +298,13 @@ name = "relative-path"
 version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba39f3699c378cd8970968dcbff9c43159ea4cfbd88d43c00b22f2ef10a435d2"
+
+[[package]]
+name = "repomaker"
+version = "0.0.0"
+dependencies = [
+ "tempfile",
+]
 
 [[package]]
 name = "rstest"

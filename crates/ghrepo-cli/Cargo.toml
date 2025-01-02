@@ -1,0 +1,28 @@
+[package]
+name = "ghrepo-cli"
+version = "0.7.0-dev"
+edition.workspace = true
+rust-version.workspace = true
+description = "Show current GitHub repository"
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+keywords = ["GitHub", "URL-parsing", "repository"]
+categories = ["command-line-utilities"]
+
+[dependencies]
+ghrepo = { version = "0.7.0-dev", path = "../ghrepo" }
+lexopt = "0.3.0"
+
+[dev-dependencies]
+assert_cmd = "2.0.14"
+repomaker = { path = "../repomaker" }
+tempfile = "3.10.1"
+which = "7.0.0"
+
+[[bin]]
+name = "ghrepo"
+path = "src/main.rs"
+
+[lints]
+workspace = true

@@ -9,11 +9,7 @@
 //! Features
 //! ========
 //!
-//! The `ghrepo` crate has the following optional features:
-//!
-//! - `cli` — Adds dependencies needed by the `ghrepo` binary.  This is enabled
-//!   by default, but if you are using `ghrepo` as a library, it is recommended
-//!   that you remove it by disabling default features.
+//! The `ghrepo` crate has the following optional feature:
 //!
 //! - `serde` — Enables serializing & deserializing the `GHRepo` type with
 //!   [`serde`]

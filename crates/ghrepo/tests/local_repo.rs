@@ -1,4 +1,3 @@
-mod repomaker;
 use ghrepo::{GHRepo, LocalRepo, LocalRepoError};
 use repomaker::RepoMaker;
 use std::env;
@@ -38,8 +37,8 @@ fn test_is_git_repo_initted() {
     if which("git").is_err() {
         return;
     }
-    let maker = RepoMaker::new();
-    maker.init("main");
+    let maker = RepoMaker::new().unwrap();
+    maker.init("main").unwrap();
     let lr = LocalRepo::new(maker.path());
     assert!(lr.is_git_repo().unwrap());
 }
@@ -62,8 +61,8 @@ fn test_current_branch() {
     if which("git").is_err() {
         return;
     }
-    let maker = RepoMaker::new();
-    maker.init("trunk");
+    let maker = RepoMaker::new().unwrap();
+    maker.init("trunk").unwrap();
     let lr = LocalRepo::new(maker.path());
     match lr.current_branch() {
         Ok(b) if b == "trunk" => (),
@@ -76,9 +75,9 @@ fn test_current_branch_detached() {
     if which("git").is_err() {
         return;
     }
-    let maker = RepoMaker::new();
-    maker.init("trunk");
-    maker.detach();
+    let maker = RepoMaker::new().unwrap();
+    maker.init("trunk").unwrap();
+    maker.detach().unwrap();
     let lr = LocalRepo::new(maker.path());
     match lr.current_branch() {
         Err(LocalRepoError::DetachedHead) => (),
@@ -110,8 +109,8 @@ fn test_github_remote_no_remote() {
     if which("git").is_err() {
         return;
     }
-    let maker = RepoMaker::new();
-    maker.init("trunk");
+    let maker = RepoMaker::new().unwrap();
+    maker.init("trunk").unwrap();
     let lr = LocalRepo::new(maker.path());
     match lr.github_remote("origin") {
         Err(LocalRepoError::NoSuchRemote(rem)) if rem == "origin" => (),
@@ -125,9 +124,9 @@ fn test_github_remote() {
         return;
     }
     let repo = GHRepo::new("octocat", "repository").unwrap();
-    let maker = RepoMaker::new();
-    maker.init("trunk");
-    maker.add_remote("origin", repo.ssh_url());
+    let maker = RepoMaker::new().unwrap();
+    maker.init("trunk").unwrap();
+    maker.add_remote("origin", repo.ssh_url()).unwrap();
     let lr = LocalRepo::new(maker.path());
     match lr.github_remote("origin") {
         Ok(lr) if lr == repo => (),
@@ -140,9 +139,11 @@ fn test_github_remote_invalid_url() {
     if which("git").is_err() {
         return;
     }
-    let maker = RepoMaker::new();
-    maker.init("trunk");
-    maker.add_remote("upstream", "https://git.example.com/repo.git");
+    let maker = RepoMaker::new().unwrap();
+    maker.init("trunk").unwrap();
+    maker
+        .add_remote("upstream", "https://git.example.com/repo.git")
+        .unwrap();
     let lr = LocalRepo::new(maker.path());
     match lr.github_remote("upstream") {
         Err(LocalRepoError::InvalidRemoteURL(_)) => (),
@@ -156,9 +157,11 @@ fn test_github_remote_non_utf8_url() {
     if which("git").is_err() {
         return;
     }
-    let maker = RepoMaker::new();
-    maker.init("trunk");
-    maker.add_remote("upstream", OsStr::from_bytes(b"../f\xF6\xF6.git"));
+    let maker = RepoMaker::new().unwrap();
+    maker.init("trunk").unwrap();
+    maker
+        .add_remote("upstream", OsStr::from_bytes(b"../f\xF6\xF6.git"))
+        .unwrap();
     let lr = LocalRepo::new(maker.path());
     match lr.github_remote("upstream") {
         Err(ref e @ LocalRepoError::InvalidUtf8(eu)) => assert_eq!(
@@ -174,8 +177,8 @@ fn test_branch_upstream_no_upstream() {
     if which("git").is_err() {
         return;
     }
-    let maker = RepoMaker::new();
-    maker.init("trunk");
+    let maker = RepoMaker::new().unwrap();
+    maker.init("trunk").unwrap();
     let lr = LocalRepo::new(maker.path());
     match lr.branch_upstream("trunk") {
         Err(LocalRepoError::NoUpstream(branch)) if branch == "trunk" => (),
@@ -189,10 +192,10 @@ fn test_branch_upstream() {
         return;
     }
     let repo = GHRepo::new("octocat", "repository").unwrap();
-    let maker = RepoMaker::new();
-    maker.init("trunk");
-    maker.add_remote("github", repo.clone_url());
-    maker.set_upstream("trunk", "github");
+    let maker = RepoMaker::new().unwrap();
+    maker.init("trunk").unwrap();
+    maker.add_remote("github", repo.clone_url()).unwrap();
+    maker.set_upstream("trunk", "github").unwrap();
     let lr = LocalRepo::new(maker.path());
     match lr.branch_upstream("trunk") {
         Ok(r) if r == repo => (),

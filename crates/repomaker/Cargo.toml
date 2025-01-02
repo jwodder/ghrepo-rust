@@ -1,0 +1,16 @@
+[package]
+name = "repomaker"
+version = "0.0.0"
+edition.workspace = true
+rust-version.workspace = true
+description = "Utility code for use in ghrepo and ghrepo-cli tests"
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+tempfile = "3.10.1"
+
+[lints]
+workspace = true
