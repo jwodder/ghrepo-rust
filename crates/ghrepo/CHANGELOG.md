@@ -1,5 +1,5 @@
-v0.7.0 (in development)
------------------------
+v0.7.0 (2025-01-02)
+-------------------
 - Increased MSRV to 1.74
 - **Breaking:** Split off CLI into a separate `ghrepo-cli` crate
 
