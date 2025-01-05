@@ -91,8 +91,8 @@ impl error::Error for ParseError {}
 /// - From a [`String`] of the form `{owner}/{name}` via the `TryFrom<String>`
 ///   trait
 /// - From a GitHub URL with [`GHRepo::from_url()`]
-/// - From a GitHub URL or a string of the form `{owner}/{name}` with
-///   [`GHRepo::from_str`]
+/// - From a GitHub URL or a string of the form `{owner}/{name}` via the
+///   [`FromStr`] trait or with `s.parse::<GHRepo>()`
 /// - From a GitHub URL, a string of the form `{owner}/{name}`, or a bare
 ///   repository name with the owner defaulting to a given value with
 ///   [`GHRepo::from_str_with_owner()`]
