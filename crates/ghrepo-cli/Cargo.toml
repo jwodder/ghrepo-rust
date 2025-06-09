@@ -18,7 +18,7 @@ lexopt = "0.3.0"
 assert_cmd = "2.0.14"
 repomaker = { path = "../repomaker" }
 tempfile = "3.10.1"
-which = "7.0.0"
+which = "8.0.0"
 
 [[bin]]
 name = "ghrepo"
