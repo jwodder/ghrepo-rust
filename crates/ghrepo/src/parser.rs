@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 /// Split a string into a maximal prefix of chars that match `pred` and the
 /// remainder of the string
 fn span<P>(s: &str, mut pred: P) -> (&str, &str)
@@ -64,41 +66,98 @@ enum State {
     End,
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 enum Token {
     /// A string to match exactly
-    Literal(&'static str),
+    Literal(Cow<'static, str>),
     /// A string to match regardless of differences in ASCII case
-    CaseFold(&'static str),
+    CaseFold(Cow<'static, str>),
 }
 
 impl From<&'static str> for Token {
     fn from(s: &'static str) -> Token {
-        Token::Literal(s)
+        Token::Literal(Cow::Borrowed(s))
     }
 }
 
-static START_PATTERNS: &[(&[Token], State)] = &[
-    (&[Token::CaseFold("https://")], State::Http),
-    (&[Token::CaseFold("http://")], State::Http),
-    (
-        &[Token::CaseFold("api.github.com"), Token::Literal("/repos/")],
-        State::OwnerName,
-    ),
-    (&[Token::CaseFold("git://github.com/")], State::OwnerNameGit),
-    (
-        &[Token::Literal("git@"), Token::CaseFold("github.com:")],
-        State::OwnerNameGit,
-    ),
-    (
-        &[
-            Token::CaseFold("ssh://"),
-            Token::Literal("git@"),
-            Token::CaseFold("github.com/"),
-        ],
-        State::OwnerNameGit,
-    ),
-];
+impl From<String> for Token {
+    fn from(s: String) -> Token {
+        Token::Literal(Cow::Owned(s))
+    }
+}
+
+fn start_patterns() -> Vec<(Vec<Token>, State)> {
+    let mut patterns = vec![
+        (vec![Token::CaseFold("https://".into())], State::Http),
+        (vec![Token::CaseFold("http://".into())], State::Http),
+        (
+            vec![
+                Token::CaseFold("api.github.com".into()),
+                Token::Literal("/repos/".into()),
+            ],
+            State::OwnerName,
+        ),
+        (
+            vec![Token::CaseFold("git://github.com/".into())],
+            State::OwnerNameGit,
+        ),
+        (
+            vec![
+                Token::Literal("git@".into()),
+                Token::CaseFold("github.com:".into()),
+            ],
+            State::OwnerNameGit,
+        ),
+        (
+            vec![
+                Token::CaseFold("ssh://".into()),
+                Token::Literal("git@".into()),
+                Token::CaseFold("github.com/".into()),
+            ],
+            State::OwnerNameGit,
+        ),
+    ];
+
+    // Add GH_HOST / Enterprise patterns if it's set and different from github.com
+    //
+    // GH_HOST is a valid environment variable for the 'gh' command.
+    if let Ok(host) = std::env::var("GH_HOST") {
+        if host != "github.com" {
+            let api_host = format!("api.{host}");
+            let git_url = format!("git://{host}/");
+            let ssh_host = format!("{host}:");
+            let ssh_url = format!("{host}/");
+
+            patterns.extend(vec![
+                (
+                    vec![
+                        Token::CaseFold(api_host.into()),
+                        Token::Literal("/repos/".into()),
+                    ],
+                    State::OwnerName,
+                ),
+                (vec![Token::CaseFold(git_url.into())], State::OwnerNameGit),
+                (
+                    vec![
+                        Token::Literal("git@".into()),
+                        Token::CaseFold(ssh_host.into()),
+                    ],
+                    State::OwnerNameGit,
+                ),
+                (
+                    vec![
+                        Token::CaseFold("ssh://".into()),
+                        Token::Literal("git@".into()),
+                        Token::CaseFold(ssh_url.into()),
+                    ],
+                    State::OwnerNameGit,
+                ),
+            ]);
+        }
+    }
+
+    patterns
+}
 
 /// If `s` is a valid GitHub repository URL, return the repository owner &
 /// name.  The following URL formats are recognized:
@@ -121,33 +180,75 @@ pub(crate) fn parse_github_url(s: &str) -> Option<(&str, &str)> {
     //   cloning with `git clone`, at least) results in either a credentials
     //   prompt for HTTPS URLs (the same as if you'd specified a nonexistent
     //   repo) or a "repository not found" message for SSH URLs.
+    let start_patterns = start_patterns();
+
     let mut parser = PullParser::new(s);
     let mut state = State::Start;
     let mut result: Option<(&str, &str)> = None;
     loop {
         state = match state {
-            State::Start => START_PATTERNS
+            State::Start => start_patterns
                 .iter()
-                .find_map(|&(tokens, transition)| parser.consume_seq(tokens).and(Some(transition)))
+                .find_map(|(tokens, transition)| parser.consume_seq(tokens).and(Some(*transition)))
                 .unwrap_or(State::Web),
             State::Http => {
                 if parser
-                    .consume_seq(&[Token::CaseFold("api.github.com"), "/repos/".into()])
+                    .consume_seq(&[
+                        Token::CaseFold("api.github.com".into()),
+                        Token::Literal("/repos/".into()),
+                    ])
                     .is_some()
                 {
                     State::OwnerName
+                } else if let Ok(host) = std::env::var("GH_HOST") {
+                    if host != "github.com" {
+                        let api_host = format!("api.{host}");
+
+                        if parser
+                            .consume_seq(&[
+                                Token::CaseFold(api_host.into()),
+                                Token::Literal("/repos/".into()),
+                            ])
+                            .is_some()
+                        {
+                            State::OwnerName
+                        } else {
+                            parser.maybe_consume_userinfo();
+                            State::Web
+                        }
+                    } else {
+                        parser.maybe_consume_userinfo();
+                        State::Web
+                    }
                 } else {
                     parser.maybe_consume_userinfo();
                     State::Web
                 }
             }
             State::Web => {
-                parser.maybe_consume(Token::CaseFold("www."));
-                parser.consume(Token::CaseFold("github.com/"))?;
-                result = Some(parser.get_owner_name()?);
-                parser.maybe_consume(".git".into());
-                parser.maybe_consume("/".into());
-                State::End
+                parser.maybe_consume(Token::CaseFold("www.".into()));
+
+                let mut hosts_to_try = vec!["github.com".to_string()];
+
+                if let Ok(host) = std::env::var("GH_HOST") {
+                    if host != "github.com" {
+                        hosts_to_try.push(host);
+                    }
+                }
+
+                // Try each host
+                for host in hosts_to_try {
+                    let web_host = format!("{host}/");
+
+                    if parser.consume(Token::CaseFold(web_host.into())).is_some() {
+                        result = Some(parser.get_owner_name()?);
+                        parser.maybe_consume(".git".into());
+                        parser.maybe_consume("/".into());
+                        return if parser.at_end() { result } else { None };
+                    }
+                }
+
+                return None;
             }
             State::OwnerName => {
                 result = Some(parser.get_owner_name()?);
@@ -177,8 +278,8 @@ impl<'a> PullParser<'a> {
         I: IntoIterator<Item = &'b Token>,
     {
         let orig = self.data;
-        for &t in tokens {
-            if self.consume(t).is_none() {
+        for t in tokens {
+            if self.consume(t.clone()).is_none() {
                 self.data = orig;
                 return None;
             }
@@ -188,7 +289,7 @@ impl<'a> PullParser<'a> {
 
     fn consume(&mut self, token: Token) -> Option<()> {
         match token {
-            Token::Literal(s) => match self.data.strip_prefix(s) {
+            Token::Literal(s) => match self.data.strip_prefix(s.as_ref()) {
                 Some(t) => {
                     self.data = t;
                     Some(())
@@ -198,7 +299,7 @@ impl<'a> PullParser<'a> {
             Token::CaseFold(s) => {
                 let i = s.len();
                 match self.data.get(..i).zip(self.data.get(i..)) {
-                    Some((t, u)) if t.eq_ignore_ascii_case(s) => {
+                    Some((t, u)) if t.eq_ignore_ascii_case(s.as_ref()) => {
                         self.data = u;
                         Some(())
                     }
@@ -298,12 +399,12 @@ mod tests {
     #[rstest]
     #[case("foobar", "foo".into(), Some(()), "bar")]
     #[case("FOObar", "foo".into(), None, "FOObar")]
-    #[case("FOObar", Token::CaseFold("foo"), Some(()), "bar")]
-    #[case("Pokémon", Token::CaseFold("poké"), Some(()), "mon")]
-    #[case("PokÉmon", Token::CaseFold("poké"), None, "PokÉmon")]
-    #[case("Pokémon", Token::CaseFold("poke"), None, "Pokémon")]
-    #[case("foo", Token::CaseFold("foobar"), None, "foo")]
-    #[case("foo", Token::CaseFold("FOO"), Some(()), "")]
+    #[case("FOObar", Token::CaseFold("foo".into()), Some(()), "bar")]
+    #[case("Pokémon", Token::CaseFold("poké".into()), Some(()), "mon")]
+    #[case("PokÉmon", Token::CaseFold("poké".into()), None, "PokÉmon")]
+    #[case("Pokémon", Token::CaseFold("poke".into()), None, "Pokémon")]
+    #[case("foo", Token::CaseFold("foobar".into()), None, "foo")]
+    #[case("foo", Token::CaseFold("FOO".into()), Some(()), "")]
     fn test_consume(
         #[case] start: &str,
         #[case] token: Token,
@@ -316,8 +417,8 @@ mod tests {
     }
 
     #[rstest]
-    #[case("FOOBar", &[Token::CaseFold("foo"), "bar".into()], None, "FOOBar")]
-    #[case("FOOBar", &[Token::CaseFold("foo"), Token::CaseFold("bar")], Some(()), "")]
+    #[case("FOOBar", &[Token::CaseFold("foo".into()), "bar".into()], None, "FOOBar")]
+    #[case("FOOBar", &[Token::CaseFold("foo".into()), Token::CaseFold("bar".into())], Some(()), "")]
     fn test_consume_seq(
         #[case] start: &str,
         #[case] tokens: &[Token],
@@ -389,5 +490,50 @@ mod tests {
     #[case("https://user:pass:extra@github.com/octocat/Hello-World", Some(("octocat", "Hello-World")))]
     fn test_parse_github_url(#[case] s: &str, #[case] out: Option<(&str, &str)>) {
         assert_eq!(parse_github_url(s), out);
+    }
+
+    #[test]
+    fn test_both_hosts_work_simultaneously() {
+        // Save original GH_HOST value if it exists
+        let original_gh_host = std::env::var("GH_HOST").ok();
+
+        // SAFETY: Test with custom GH_HOST - should work for BOTH hosts
+        unsafe { std::env::set_var("GH_HOST", "github.example.com") };
+
+        // GitHub.com URLs should still work
+        assert_eq!(
+            parse_github_url("git@github.com:joe-q-coder/my.repo.git"),
+            Some(("joe-q-coder", "my.repo"))
+        );
+        assert_eq!(
+            parse_github_url("https://github.com/joe-coder/hello.world"),
+            Some(("joe-coder", "hello.world"))
+        );
+        assert_eq!(
+            parse_github_url("https://api.github.com/repos/jwodder/headerparser"),
+            Some(("jwodder", "headerparser"))
+        );
+
+        // GH_HOST URLs should also work
+        assert_eq!(
+            parse_github_url("git@github.example.com:joe-q-coder/my.repo.git"),
+            Some(("joe-q-coder", "my.repo"))
+        );
+        assert_eq!(
+            parse_github_url("https://github.example.com/joe-coder/hello.world"),
+            Some(("joe-coder", "hello.world"))
+        );
+        assert_eq!(
+            parse_github_url("https://api.github.example.com/repos/jwodder/headerparser"),
+            Some(("jwodder", "headerparser"))
+        );
+
+        // SAFETY: Restore original GH_HOST value
+        unsafe {
+            match original_gh_host {
+                Some(val) => std::env::set_var("GH_HOST", val),
+                None => std::env::remove_var("GH_HOST"),
+            }
+        };
     }
 }
