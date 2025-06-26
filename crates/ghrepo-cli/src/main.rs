@@ -52,6 +52,8 @@ impl Command {
                 println!();
                 println!("Show current GitHub repository");
                 println!();
+                println!("Visit <https://github.com/jwodder/ghrepo-rust> for more information.");
+                println!();
                 println!("Options:");
                 println!("  -J, --json        Output JSON");
                 println!("  -r <REMOTE>, --remote <REMOTE>");
