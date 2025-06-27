@@ -1,5 +1,5 @@
-v0.7.1 (in development)
------------------------
+v0.7.1 (2025-06-27)
+-------------------
 - The `Display` impl for `GHRepo` now supports width, fill, alignment, and
   precision flags
 
