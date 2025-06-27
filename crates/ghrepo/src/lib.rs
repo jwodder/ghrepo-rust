@@ -247,7 +247,7 @@ impl fmt::Debug for GHRepo {
 
 impl fmt::Display for GHRepo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.fullname)
+        f.pad(&self.fullname)
     }
 }
 
