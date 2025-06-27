@@ -115,7 +115,7 @@ dependencies = [
 
 [[package]]
 name = "ghrepo"
-version = "0.7.0"
+version = "0.8.0-dev"
 dependencies = [
  "repomaker",
  "rstest",

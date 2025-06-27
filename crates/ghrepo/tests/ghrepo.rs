@@ -18,6 +18,12 @@ fn test_to_string() {
 }
 
 #[test]
+fn test_pad() {
+    let r = GHRepo::new("octocat", "repository").unwrap();
+    assert_eq!(format!("{r:.^24}"), "...octocat/repository...");
+}
+
+#[test]
 fn test_debug() {
     let r = GHRepo::new("octocat", "repository").unwrap();
     assert_eq!(format!("{r:?}"), r#""octocat/repository""#);
