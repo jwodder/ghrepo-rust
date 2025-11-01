@@ -15,7 +15,7 @@ ghrepo = { version = "0.7.0", path = "../ghrepo" }
 lexopt = "0.3.0"
 
 [dev-dependencies]
-assert_cmd = "2.0.14"
+assert_cmd = "2.1.0"
 repomaker = { path = "../repomaker" }
 tempfile = "3.10.1"
 which = "8.0.0"
