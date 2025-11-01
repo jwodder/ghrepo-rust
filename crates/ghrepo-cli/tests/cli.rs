@@ -1,4 +1,4 @@
-use assert_cmd::Command;
+use assert_cmd::cargo::cargo_bin_cmd;
 use ghrepo::GHRepo;
 use repomaker::RepoMaker;
 use tempfile::tempdir;
@@ -13,8 +13,7 @@ fn test_run() {
     let maker = RepoMaker::new().unwrap();
     maker.init("trunk").unwrap();
     maker.add_remote("origin", repo.ssh_url()).unwrap();
-    Command::cargo_bin("ghrepo")
-        .unwrap()
+    cargo_bin_cmd!("ghrepo")
         .arg(maker.path())
         .assert()
         .success()
@@ -30,8 +29,7 @@ fn test_run_noarg() {
     let maker = RepoMaker::new().unwrap();
     maker.init("trunk").unwrap();
     maker.add_remote("origin", repo.ssh_url()).unwrap();
-    Command::cargo_bin("ghrepo")
-        .unwrap()
+    cargo_bin_cmd!("ghrepo")
         .current_dir(maker.path())
         .assert()
         .success()
@@ -57,8 +55,7 @@ fn test_run_json() {
     let maker = RepoMaker::new().unwrap();
     maker.init("trunk").unwrap();
     maker.add_remote("origin", repo.ssh_url()).unwrap();
-    Command::cargo_bin("ghrepo")
-        .unwrap()
+    cargo_bin_cmd!("ghrepo")
         .arg("--json")
         .arg(maker.path())
         .assert()
@@ -85,8 +82,7 @@ fn test_run_json_noarg() {
     let maker = RepoMaker::new().unwrap();
     maker.init("trunk").unwrap();
     maker.add_remote("origin", repo.ssh_url()).unwrap();
-    Command::cargo_bin("ghrepo")
-        .unwrap()
+    cargo_bin_cmd!("ghrepo")
         .arg("--json")
         .current_dir(maker.path())
         .assert()
@@ -105,8 +101,7 @@ fn test_run_remote() {
     maker.init("trunk").unwrap();
     maker.add_remote("origin", origin.ssh_url()).unwrap();
     maker.add_remote("upstream", upstream.clone_url()).unwrap();
-    Command::cargo_bin("ghrepo")
-        .unwrap()
+    cargo_bin_cmd!("ghrepo")
         .arg("--remote")
         .arg("upstream")
         .arg(maker.path())
@@ -126,8 +121,7 @@ fn test_run_remote_noarg() {
     maker.init("trunk").unwrap();
     maker.add_remote("origin", origin.ssh_url()).unwrap();
     maker.add_remote("upstream", upstream.clone_url()).unwrap();
-    Command::cargo_bin("ghrepo")
-        .unwrap()
+    cargo_bin_cmd!("ghrepo")
         .arg("--remote")
         .arg("upstream")
         .current_dir(maker.path())
@@ -142,8 +136,7 @@ fn test_run_empty() {
         return;
     }
     let tmp_path = tempdir().unwrap();
-    Command::cargo_bin("ghrepo")
-        .unwrap()
+    cargo_bin_cmd!("ghrepo")
         .arg(tmp_path.path())
         .assert()
         .failure()
@@ -158,8 +151,7 @@ fn test_run_no_such_remote() {
     }
     let maker = RepoMaker::new().unwrap();
     maker.init("trunk").unwrap();
-    Command::cargo_bin("ghrepo")
-        .unwrap()
+    cargo_bin_cmd!("ghrepo")
         .arg(maker.path())
         .assert()
         .failure()
@@ -177,8 +169,7 @@ fn test_run_invalid_url() {
     maker
         .add_remote("upstream", "https://git.example.com/repo.git")
         .unwrap();
-    Command::cargo_bin("ghrepo")
-        .unwrap()
+    cargo_bin_cmd!("ghrepo")
         .arg("-rupstream")
         .arg(maker.path())
         .assert()
