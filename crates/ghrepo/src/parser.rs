@@ -30,10 +30,16 @@ fn is_owner_char(c: char) -> bool {
 pub(crate) fn split_name(s: &str) -> Option<(&str, &str)> {
     let (name, rem) = span(s, is_name_char);
     let (name, rem) = match name.len().checked_sub(4) {
-        Some(i) if name.get(i..).unwrap_or("").eq_ignore_ascii_case(".git") => s.split_at(i),
+        Some(i)
+            if name
+                .get(i..)
+                .is_some_and(|t| t.eq_ignore_ascii_case(".git")) =>
+        {
+            s.split_at(i)
+        }
         _ => (name, rem),
     };
-    if name.is_empty() || name == "." || name == ".." {
+    if matches!(name, "" | "." | "..") {
         None
     } else {
         Some((name, rem))
