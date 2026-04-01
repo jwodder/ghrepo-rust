@@ -57,7 +57,9 @@ impl Command {
                 println!("Options:");
                 println!("  -J, --json        Output JSON");
                 println!("  -r <REMOTE>, --remote <REMOTE>");
-                println!("                    Parse the GitHub URL from the given remote [default: origin]");
+                println!(
+                    "                    Parse the GitHub URL from the given remote [default: origin]"
+                );
                 println!("  -h, --help        Display this help message and exit");
                 println!("  -V, --version     Show the program version and exit");
             }
