@@ -1,3 +1,7 @@
+v0.8.0 (in development)
+-----------------------
+- Increased MSRV to 1.85
+
 v0.7.1 (2025-06-27)
 -------------------
 - The `Display` impl for `GHRepo` now supports width, fill, alignment, and
