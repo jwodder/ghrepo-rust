@@ -2,9 +2,9 @@
 #![cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 use super::GHRepo;
 use serde::{
+    Deserialize, Serialize,
     de::{Deserializer, Unexpected, Visitor},
     ser::Serializer,
-    Deserialize, Serialize,
 };
 use std::fmt;
 

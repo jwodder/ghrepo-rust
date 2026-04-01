@@ -3,7 +3,7 @@ use std::fs;
 use std::io::Result;
 use std::path::Path;
 use std::process::Command;
-use tempfile::{tempdir, TempDir};
+use tempfile::{TempDir, tempdir};
 
 #[derive(Debug)]
 pub struct RepoMaker {
