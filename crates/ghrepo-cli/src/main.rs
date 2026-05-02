@@ -46,7 +46,7 @@ impl Command {
         match self {
             Command::Help => {
                 println!(
-                    "Usage: {} [-J|--json] [-r|--remote <REMOTE>] [<REPO PATH>]",
+                    "Usage: {} [<options>] [<repo-path>]",
                     env!("CARGO_BIN_NAME")
                 );
                 println!();
@@ -56,7 +56,7 @@ impl Command {
                 println!();
                 println!("Options:");
                 println!("  -J, --json        Output JSON");
-                println!("  -r <REMOTE>, --remote <REMOTE>");
+                println!("  -r REMOTE, --remote REMOTE");
                 println!(
                     "                    Parse the GitHub URL from the given remote [default: origin]"
                 );
