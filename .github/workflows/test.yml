@@ -38,7 +38,7 @@ jobs:
             toolchain: stable
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
 
@@ -50,7 +50,7 @@ jobs:
 
       - name: Install Rust
         if: matrix.toolchain != 'msrv'
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
         with:
           toolchain: ${{ matrix.toolchain }}
 
@@ -63,16 +63,16 @@ jobs:
 
       - name: Install minimum supported Rust version
         if: matrix.toolchain == 'msrv'
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
         with:
           toolchain: ${{ steps.msrv.outputs.msrv }}
 
       - name: Activate cache
         if: "!startsWith(github.head_ref, 'renovate/')"
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
       - name: Install cargo-hack
-        uses: taiki-e/install-action@cargo-hack
+        uses: taiki-e/install-action@0276ab8ba1c860f0c06cb9d4af0359994de74057 # cargo-hack
 
       - name: Build crate
         run: cargo hack --workspace --feature-powerset build --all-targets --verbose
@@ -84,7 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
 
@@ -95,7 +95,7 @@ jobs:
           git config --global user.email 'ghactions@nil.nil'
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
         with:
           toolchain: stable
 
@@ -105,10 +105,10 @@ jobs:
 
       - name: Activate cache
         if: "!startsWith(github.head_ref, 'renovate/')"
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
       - name: Install cargo-hack and cargo-minimal-versions
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@db5fb34fa772531a3ece57ca434f579eb334e0fb # v2
         with:
           tool: cargo-hack,cargo-minimal-versions
 
@@ -124,7 +124,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
 
@@ -135,17 +135,17 @@ jobs:
           git config --global user.email 'ghactions@nil.nil'
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
         with:
           toolchain: stable
           components: llvm-tools
 
       - name: Activate cache
         if: "!startsWith(github.head_ref, 'renovate/')"
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@db5fb34fa772531a3ece57ca434f579eb334e0fb # v2
         with:
           tool: cargo-llvm-cov
 
@@ -153,7 +153,7 @@ jobs:
         run: cargo llvm-cov --workspace --all-features --lcov --output-path lcov.info
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
         with:
           files: lcov.info
           fail_ci_if_error: false
@@ -163,22 +163,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
         with:
           toolchain: stable
           components: clippy, rustfmt
 
       - name: Activate cache
         if: "!startsWith(github.head_ref, 'renovate/')"
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
       - name: Install cargo-hack
-        uses: taiki-e/install-action@cargo-hack
+        uses: taiki-e/install-action@0276ab8ba1c860f0c06cb9d4af0359994de74057 # cargo-hack
 
       - name: Check code
         run: cargo hack --workspace --feature-powerset clippy -- -Dwarnings
@@ -193,18 +193,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           persist-credentials: false
 
       - name: Install nightly Rust
-        uses: dtolnay/rust-toolchain@master
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9 # master
         with:
           toolchain: nightly
 
       - name: Activate cache
         if: "!startsWith(github.head_ref, 'renovate/')"
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
 
       - name: Check docs
         run: cargo doc -p ghrepo --no-deps --all-features
