@@ -119,6 +119,7 @@ dependencies = [
  "assert_cmd",
  "ghrepo",
  "lexopt",
+ "predicates",
  "repomaker",
  "tempfile",
  "which",
