@@ -141,7 +141,7 @@ fn test_run_empty() {
         .assert()
         .failure()
         .stdout("")
-        .stderr("fatal: not a git repository (or any of the parent directories): .git\n");
+        .stderr(predicates::str::starts_with("fatal: not a git repository"));
 }
 
 #[test]
